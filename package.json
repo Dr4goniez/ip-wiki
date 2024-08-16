@@ -1,0 +1,36 @@
+{
+  "name": "ip-wiki",
+  "version": "1.0.0",
+  "description": "An IP utility module.",
+  "main": "src/IP.js",
+  "types": "types/IP.d.ts",
+  "scripts": {
+    "test": "node src/test.js",
+    "build": "tsc -p ."
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Dr4goniez/ip-wiki.git"
+  },
+  "keywords": [
+    "ip",
+    "ipv4",
+    "ipv6",
+    "cidr",
+    "wiki",
+    "wikipedia"
+  ],
+  "author": "Dr4goniez",
+  "license": "CC-BY-SA-4.0",
+  "bugs": {
+    "url": "https://github.com/Dr4goniez/ip-wiki/issues"
+  },
+  "homepage": "https://github.com/Dr4goniez/ip-wiki#readme",
+  "devDependencies": {
+    "@typescript-eslint/eslint-plugin": "^8.1.0",
+    "@typescript-eslint/parser": "^8.1.0",
+    "eslint": "^9.9.0",
+    "typedoc": "^0.26.5",
+    "typescript": "^5.5.4"
+  }
+}

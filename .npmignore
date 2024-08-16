@@ -1,0 +1,11 @@
+# Same as .gitignore
+node_modules
+src/test.js
+
+# Configs for the development environment
+.eslintrc.json
+tsconfig.json
+
+# Documentation
+docs
+
