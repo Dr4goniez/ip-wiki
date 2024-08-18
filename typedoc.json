@@ -1,0 +1,9 @@
+{
+	"entryPoints": ["src/IP.js"],
+	"excludeInternal": true,
+	"excludePrivate": false,
+	"excludeProtected": false,
+	"includeVersion": true,
+	"out": "docs",
+	"readme": "none",
+}

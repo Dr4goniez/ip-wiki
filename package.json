@@ -1,12 +1,13 @@
 {
   "name": "ip-wiki",
-  "version": "1.0.0",
+  "version": "0.0.0",
   "description": "An IP utility module.",
   "main": "src/IP.js",
   "types": "types/IP.d.ts",
   "scripts": {
     "test": "node src/test.js",
-    "build": "tsc -p ."
+    "build": "tsc -p .",
+    "docs": "npx typedoc --options typedoc.json"
   },
   "repository": {
     "type": "git",

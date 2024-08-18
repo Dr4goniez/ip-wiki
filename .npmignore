@@ -5,7 +5,7 @@ src/test.js
 # Configs for the development environment
 .eslintrc.json
 tsconfig.json
+typedoc.json
 
 # Documentation
 docs
-
