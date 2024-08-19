@@ -32,12 +32,6 @@ class IPBase {
 	}
 
 	/**
-	 * @typedef {object} Parsed
-	 * The return type of `IPBase.parse`.
-	 * @property {number[]} parts Parts of the IP as an array of decimals.
-	 * @property {number?} bitLen The bit length if the parsed address is a CIDR.
-	 */
-	/**
 	 * Parse a string that potentially represents an IP or CIDR address.
 	 * @param {string} ipStr
 	 * @param {number} [bitLen] An optional bit length of the IP address.
@@ -113,21 +107,6 @@ class IPBase {
 	}
 
 	/**
-	 * @typedef {object} RangeObject
-	 * The architecture of the internal private properties of an instance of the {@link IP} class
-	 * (where a copy of the properties can be obtained by {@link IP#getProperties}).
-	 *
-	 * This object stores the parsing result of the original IP string, forcibly interpreted as a
-	 * CIDR address. The "forcible interpretation" stands for the internal conversion of any IP
-	 * address into a CIDR address, e.g. `192.168.0.1` -> `192.168.0.1/32`, stored as arrays of
-	 * decimals with a bit length. The `isCidr` property remembers whether the original string
-	 * really was a CIDR.
-	 * @property {number[]} first An array of decimals that represent the first IP of the CIDR address.
-	 * @property {number[]} last An array of decimals that represent the last IP of the CIDR address.
-	 * @property {number} bitLen The bit length of the CIDR address.
-	 * @property {boolean} isCidr `false` if the original address was not a CIDR.
-	 */
-	/**
 	 * Get the start and end IP addresses for the range of `bitLen` as an object of arrays of decimals.
 	 * @param {number[]} parts
 	 * @param {number?} bitLen
@@ -190,24 +169,6 @@ class IPBase {
 
 	}
 
-	/**
-	 * @typedef {object} StringifyOptions
-	 * @property {"short"|"long"} [mode] The format of the output.
-	 *
-	 * `undefined`: Return the IP address in its "sanitized" notation. For example:
-	 * * `192.168.0.1` (for IPv4 addresses, same as `mode: 'short'`)
-	 * * `fd12:3456:789a:1:0:0:0:0`
-	 *
-	 * `'short'`: Return the IP address in its shortest notation. For example:
-	 * * `192.168.0.1` (for IPv4 addresses, same as `mode: undefined`)
-	 * * `fd12:3456:789a:1::`
-	 *
-	 * `'long'`: Return the IP address in its longest notation, with each bit chunk padded with `0`.
-	 * For example:
-	 * * `192.168.000.001`
-	 * * `fd12:3456:789a:0001:0000:0000:0000:0000`
-	 * @property {boolean} [capitalize] Whether to capitalize the output IP address.
-	 */
 	/**
 	 * Stringify an array of IP parts in decimals.
 	 * @param {number[]} decimals
@@ -409,37 +370,6 @@ class IPUtil extends IPBase {
 		return this.parseAndStringify(ipStr, {mode: 'long', capitalize});
 	}
 
-	/**
-	 * @typedef {"strict"} StrictCIDR
-	 * The strict CIDR validation mode checks whether the input string is a genuinely valid CIDR,
-	 * ruling out unmatching prefixes. For example, the (potential) CIDR `192.168.0.1/24` is
-	 * inaccurate in that the prefix `192.168.0.1` should instead be `192.168.0.0` for the bit
-	 * length of `24`.
-	 *
-	 * Without the validation mode on, `IP.isIP('192.168.0.1/24', true)` still returns `true`. But
-	 * with it on, the relevant method will return a corrected CIDR as a string instead of a boolean
-	 * if the input string is potentially valid as a CIDR but is inaccurate:
-	 * ```
-	 * // allowCidr: false or undefined
-	 * console.log(IP.isIP('192.168.0.1')); // true
-	 * console.log(IP.isIP('192.168.0.1/24')); // false
-	 * // allowCidr: true
-	 * console.log(IP.isIP('192.168.0.1', true)); // true
-	 * console.log(IP.isIP('192.168.0.1/24', true)); // true
-	 * console.log(IP.isIP('192.168.0.0/24', true)); // true
-	 * // allowCidr: 'strict'
-	 * console.log(IP.isIP('192.168.0.1', 'strict')); // true (just as when allowCidr is true)
-	 * console.log(IP.isIP('192.168.0.1/24', 'strict')); // 192.168.0.0/24
-	 * console.log(IP.isIP('192.168.0.0/24', 'strict')); // true
-	 * ```
-	 */
-	/**
-	 * @callback ConditionPredicate
-	 * The type of the optional callback function of {@link IPUtil.validate}.
-	 * @param {4|6} version
-	 * @param {boolean} isCidr
-	 * @returns {boolean}
-	 */
 	/**
 	 * Validate a string as an IP address under certain conditions.
 	 * @overload
@@ -1072,7 +1002,13 @@ class IP extends IPBase {
 	}
 
 };
-
+/**
+ * @typedef {import('./IP-types.ts').Parsed} Parsed
+ * @typedef {import('./IP-types.ts').RangeObject} RangeObject
+ * @typedef {import('./IP-types.ts').StringifyOptions} StringifyOptions
+ * @typedef {import('./IP-types.ts').StrictCIDR} StrictCIDR
+ * @typedef {import('./IP-types.ts').ConditionPredicate} ConditionPredicate
+ */
 module.exports = {
 	IPUtil,
 	IP
