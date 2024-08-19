@@ -5,5 +5,5 @@
 	"excludeProtected": false,
 	"includeVersion": true,
 	"out": "docs",
-	"readme": "none",
+	"readme": "README.md",
 }
