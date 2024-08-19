@@ -240,15 +240,16 @@ class IPBase {
 	}
 
 	/**
-	 * Check whether a given IP falls within a range.
-	 * @param {RangeObject} ipObj An object of arrays of the IP parts in decimals.
-	 * @param {string|IP} ipRange
-	 * @returns {boolean?} `null` if `ipRange` does not represent an IP address.
+	 * Compare two ranges to check their inclusion relationship.
+	 * @param {RangeObject} ip1 An object of arrays of the IP parts in decimals.
+	 * @param {string|IP} ip2
+	 * @param {"<"|">"} comparator Which of `ip1` and `ip2` is expected to be broader.
+	 * @returns {boolean?} `null` if `ip2` does not represent an IP address.
 	 * @protected
 	 */
-	static fallsWithin(ipObj, ipRange) {
-		const range1 = ipObj;
-		const range2 = this.getRangeObject(ipRange);
+	static compareRanges(ip1, ip2, comparator) {
+		const range1 = ip1;
+		const range2 = this.getRangeObject(ip2);
 		if (range2 === null) {
 			return null;
 		}
@@ -256,8 +257,18 @@ class IPBase {
 		if (![range1.last, range2.first, range2.last].every(({length}) => length === len)) {
 			return false;
 		}
-		for (let i = 0; i < range1.first.length; i++) {
-			if (!(range2.first[i] <= range1.first[i] && range1.last[i] <= range2.last[i])) {
+		let broader, narrower
+		if (comparator === '<') {
+			broader = range2;
+			narrower = range1;
+		} else if (comparator === '>') {
+			broader = range1;
+			narrower = range2;
+		} else {
+			throw new Error('Invalid comparator has been provided.');
+		}
+		for (let i = 0; i < len; i++) {
+			if (!(broader.first[i] <= narrower.first[i] && narrower.last[i] <= broader.last[i])) {
 				return false;
 			}
 		}
@@ -530,7 +541,7 @@ class IPUtil extends IPBase {
 	 */
 	static isCIDR(ipStr, mode, options) {
 		/** @type {ConditionPredicate} */
-		const cond = (_ , isCidr) => isCidr;
+		const cond = (_, isCidr) => isCidr;
 		return mode !== 'strict' ?
 			this.validate(ipStr, true, cond) :
 			this.validate(ipStr, 'strict', cond, options);
@@ -559,7 +570,7 @@ class IPUtil extends IPBase {
 	 */
 	static isIPv4CIDR(ipStr, mode, options) {
 		/** @type {ConditionPredicate} */
-		const cond = (version , isCidr) => version === 4 && isCidr;
+		const cond = (version, isCidr) => version === 4 && isCidr;
 		return mode !== 'strict' ?
 			this.validate(ipStr, true, cond) :
 			this.validate(ipStr, 'strict', cond, options);
@@ -588,60 +599,110 @@ class IPUtil extends IPBase {
 	 */
 	static isIPv6CIDR(ipStr, mode, options) {
 		/** @type {ConditionPredicate} */
-		const cond = (version , isCidr) => version === 6 && isCidr;
+		const cond = (version, isCidr) => version === 6 && isCidr;
 		return mode !== 'strict' ?
 			this.validate(ipStr, true, cond) :
 			this.validate(ipStr, 'strict', cond, options);
 	}
 
 	/**
-	 * Evaluate whether the IP address associated with `ipStr` is within another IP range.
+	 * Evaluate whether the IP address associated with `ipStr` is within that associated with `cidrStr`.
 	 * @param {string|IP} ipStr
-	 * @param {string|IP} range
+	 * @param {string|IP} cidrStr
 	 * @returns {boolean?} `null` when either of the input IP addresses is (or both are) invalid.
 	 */
-	static isInRange(ipStr, range) {
+	static isInRange(ipStr, cidrStr) {
 		const ip = this.getRangeObject(ipStr);
 		if (ip === null) {
 			return null;
 		}
-		return this.fallsWithin(ip, range);
+		return this.compareRanges(ip, cidrStr, '<');
 	}
 
 	/**
 	 * Evaluate whether the IP address associated with `ipStr` is within any IP range
-	 * specified as an array.
+	 * in the `cidrArr` array.
 	 * @param {string|IP} ipStr
-	 * @param {(string|IP)[]} ranges An array of IP- or CIDR-representing strings or IP instances.
-	 * @returns {number?} The index number of the first match in the `ranges` array, or `-1` if there is
+	 * @param {(string|IP)[]} cidrArr An array of IP- or CIDR-representing strings or IP instances.
+	 * @returns {number?} The index number of the first match in the `cidrArr` array, or `-1` if there is
 	 * no match. `null` will be returned if `ipStr` does not represent an IP address.
 	 */
-	static isInAnyRange(ipStr, ranges) {
+	static isInAnyRange(ipStr, cidrArr) {
 		const ip = this.getRangeObject(ipStr);
 		if (ip === null) {
 			return null;
 		}
-		return ranges.findIndex((range) => !!this.fallsWithin(ip, range));
+		return cidrArr.findIndex((cidr) => !!this.compareRanges(ip, cidr, '<'));
 	}
 
 	/**
 	 * Evaluate whether the IP address associated with `ipStr` is within all IP ranges
-	 * specified as an array.
+	 * in the `cidrArr` array.
 	 * @param {string|IP} ipStr
-	 * @param {(string|IP)[]} ranges An array of IP- or CIDR-representing strings or IP instances.
+	 * @param {(string|IP)[]} cidrArr An array of IP- or CIDR-representing strings or IP instances.
 	 * @returns {boolean?} `null` if:
 	 * * `ipStr` does not represent an IP address.
-	 * * `ranges` is not an array or an empty array.
+	 * * `cidrArr` is not an array or an empty array.
 	 */
-	static isInAllRanges(ipStr, ranges) {
-		if (!Array.isArray(ranges) || !ranges.length) {
+	static isInAllRanges(ipStr, cidrArr) {
+		if (!Array.isArray(cidrArr) || !cidrArr.length) {
 			return null;
 		}
 		const ip = this.getRangeObject(ipStr);
 		if (ip === null) {
 			return null;
 		}
-		return ranges.every((range) => !!this.fallsWithin(ip, range));
+		return cidrArr.every((cidr) => !!this.compareRanges(ip, cidr, '<'));
+	}
+
+	/**
+	 * Evaluate whether the IP address associated with `cidrStr` contains that associated with `ipStr`.
+	 * @param {string|IP} cidrStr
+	 * @param {string|IP} ipStr
+	 * @returns {boolean?} `null` when either of the input IP addresses is (or both are) invalid.
+	 */
+	static contains(cidrStr, ipStr) {
+		const cidr = this.getRangeObject(cidrStr);
+		if (cidr === null) {
+			return null;
+		}
+		return this.compareRanges(cidr, ipStr, '>');
+	}
+
+	/**
+	 * Evaluate whether the IP address associated with `cidrStr` contains any IP address
+	 * in the `ipArr` array.
+	 * @param {string|IP} cidrStr
+	 * @param {(string|IP)[]} ipArr An array of IP- or CIDR-representing strings or IP instances.
+	 * @returns {number?} The index number of the first match in the `ipArr` array, or `-1` if there is
+	 * no match. `null` will be returned if `cidrStr` does not represent an IP address.
+	 */
+	static containsAny(cidrStr, ipArr) {
+		const cidr = this.getRangeObject(cidrStr);
+		if (cidr === null) {
+			return null;
+		}
+		return ipArr.findIndex((ip) => !!this.compareRanges(cidr, ip, '>'));
+	}
+
+	/**
+	 * Evaluate whether the IP address associated with `cidrStr` contains all IP addresses
+	 * in the `ipArr` array.
+	 * @param {string|IP} cidrStr
+	 * @param {(string|IP)[]} ipArr An array of IP- or CIDR-representing strings or IP instances.
+	 * @returns {boolean?} `null` if:
+	 * * `cidrStr` does not represent an IP address.
+	 * * `ipArr` is not an array or an empty array.
+	 */
+	static containsAll(cidrStr, ipArr) {
+		if (!Array.isArray(ipArr) || !ipArr.length) {
+			return null;
+		}
+		const cidr = this.getRangeObject(cidrStr);
+		if (cidr === null) {
+			return null;
+		}
+		return ipArr.every((ip) => !!this.compareRanges(cidr, ip, '>'));
 	}
 
 	/**
@@ -933,37 +994,72 @@ class IP extends IPBase {
 	}
 
 	/**
-	 * Evaluate whether the IP address associated with this intance is within an IP range.
-	 * @param {string|IP} range
-	 * @returns {boolean?} `null` when `range` is not a valid IP address.
+	 * Evaluate whether the IP address associated with this instance is within that associated with `cidrStr`.
+	 * @param {string|IP} cidrStr
+	 * @returns {boolean?} `null` when `cidrStr` is not a valid IP address.
 	 */
-	isInRange(range) {
-		return IP.fallsWithin(this.getProperties(), range);
+	isInRange(cidrStr) {
+		return IP.compareRanges(this.getProperties(), cidrStr, '<');
 	}
 
 	/**
-	 * Evaluate whether the IP address associated with this intance is within any IP range
-	 * in the `ranges` array.
-	 * @param {(string|IP)[]} ranges An array of IP- or CIDR-representing strings or IP instances.
-	 * @returns {number} The index number of the first match in the `ranges` array, or `-1` otherwise.
+	 * Evaluate whether the IP address associated with this instance is within any IP range
+	 * in the `cidrArr` array.
+	 * @param {(string|IP)[]} cidrArr An array of IP- or CIDR-representing strings or IP instances.
+	 * @returns {number} The index number of the first match in the `cidrArr` array, or `-1` otherwise.
 	 */
-	isInAnyRange(ranges) {
+	isInAnyRange(cidrArr) {
 		const props = this.getProperties();
-		return ranges.findIndex((range) => !!IP.fallsWithin(props, range));
+		return cidrArr.findIndex((cidr) => !!IP.compareRanges(props, cidr, '<'));
 	}
 
 	/**
-	 * Evaluate whether the IP address associated with this intance is within all IP ranges
-	 * in the `ranges` array.
-	 * @param {(string|IP)[]} ranges An array of IP- or CIDR-representing strings or IP instances.
+	 * Evaluate whether the IP address associated with this instance is within all IP ranges
+	 * in the `cidrArr` array.
+	 * @param {(string|IP)[]} cidrArr An array of IP- or CIDR-representing strings or IP instances.
 	 * @returns {boolean}
 	 */
-	isInAllRanges(ranges) {
-		if (!Array.isArray(ranges) || !ranges.length) {
+	isInAllRanges(cidrArr) {
+		if (!Array.isArray(cidrArr) || !cidrArr.length) {
 			return false;
 		}
 		const props = this.getProperties();
-		return ranges.every((range) => !!IP.fallsWithin(props, range));
+		return cidrArr.every((cidr) => !!IP.compareRanges(props, cidr, '<'));
+	}
+
+	/**
+	 * Evaluate whether the IP address associated with this instance contains that associated
+	 * with `ipStr`.
+	 * @param {string|IP} ipStr
+	 * @returns {boolean?} `null` when `ipStr` is not a valid IP address.
+	 */
+	contains(ipStr) {
+		return IP.compareRanges(this.getProperties(), ipStr, '>');
+	}
+
+	/**
+	 * Evaluate whether the IP address associated with this instance contains any IP address
+	 * in the `ipArr` array.
+	 * @param {(string|IP)[]} ipArr An array of IP- or CIDR-representing strings or IP instances.
+	 * @returns {number} The index number of the first match in the `ipArr` array, or `-1` otherwise.
+	 */
+	containsAny(ipArr) {
+		const props = this.getProperties();
+		return ipArr.findIndex((ip) => !!IP.compareRanges(props, ip, '>'));
+	}
+
+	/**
+	 * Evaluate whether the IP address associated with this instance contains all IP addresses
+	 * in the `ipArr` array.
+	 * @param {(string|IP)[]} ipArr An array of IP- or CIDR-representing strings or IP instances.
+	 * @returns {boolean}
+	 */
+	containsAll(ipArr) {
+		if (!Array.isArray(ipArr) || !ipArr.length) {
+			return false;
+		}
+		const props = this.getProperties();
+		return ipArr.every((ip) => !!IP.compareRanges(props, ip, '>'));
 	}
 
 	/**

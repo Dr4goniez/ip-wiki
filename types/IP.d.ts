@@ -184,31 +184,57 @@ export class IPUtil extends IPBase {
      */
     static isIPv6CIDR(ipStr: string, mode: StrictCIDR, options?: StringifyOptions | undefined): boolean | string;
     /**
-     * Evaluate whether the IP address associated with `ipStr` is within another IP range.
+     * Evaluate whether the IP address associated with `ipStr` is within that associated with `cidrStr`.
      * @param {string|IP} ipStr
-     * @param {string|IP} range
+     * @param {string|IP} cidrStr
      * @returns {boolean?} `null` when either of the input IP addresses is (or both are) invalid.
      */
-    static isInRange(ipStr: string | IP, range: string | IP): boolean | null;
+    static isInRange(ipStr: string | IP, cidrStr: string | IP): boolean | null;
     /**
      * Evaluate whether the IP address associated with `ipStr` is within any IP range
-     * specified as an array.
+     * in the `cidrArr` array.
      * @param {string|IP} ipStr
-     * @param {(string|IP)[]} ranges An array of IP- or CIDR-representing strings or IP instances.
-     * @returns {number?} The index number of the first match in the `ranges` array, or `-1` if there is
+     * @param {(string|IP)[]} cidrArr An array of IP- or CIDR-representing strings or IP instances.
+     * @returns {number?} The index number of the first match in the `cidrArr` array, or `-1` if there is
      * no match. `null` will be returned if `ipStr` does not represent an IP address.
      */
-    static isInAnyRange(ipStr: string | IP, ranges: (string | IP)[]): number | null;
+    static isInAnyRange(ipStr: string | IP, cidrArr: (string | IP)[]): number | null;
     /**
      * Evaluate whether the IP address associated with `ipStr` is within all IP ranges
-     * specified as an array.
+     * in the `cidrArr` array.
      * @param {string|IP} ipStr
-     * @param {(string|IP)[]} ranges An array of IP- or CIDR-representing strings or IP instances.
+     * @param {(string|IP)[]} cidrArr An array of IP- or CIDR-representing strings or IP instances.
      * @returns {boolean?} `null` if:
      * * `ipStr` does not represent an IP address.
-     * * `ranges` is not an array or an empty array.
+     * * `cidrArr` is not an array or an empty array.
      */
-    static isInAllRanges(ipStr: string | IP, ranges: (string | IP)[]): boolean | null;
+    static isInAllRanges(ipStr: string | IP, cidrArr: (string | IP)[]): boolean | null;
+    /**
+     * Evaluate whether the IP address associated with `cidrStr` contains that associated with `ipStr`.
+     * @param {string|IP} cidrStr
+     * @param {string|IP} ipStr
+     * @returns {boolean?} `null` when either of the input IP addresses is (or both are) invalid.
+     */
+    static contains(cidrStr: string | IP, ipStr: string | IP): boolean | null;
+    /**
+     * Evaluate whether the IP address associated with `cidrStr` contains any IP address
+     * in the `ipArr` array.
+     * @param {string|IP} cidrStr
+     * @param {(string|IP)[]} ipArr An array of IP- or CIDR-representing strings or IP instances.
+     * @returns {number?} The index number of the first match in the `ipArr` array, or `-1` if there is
+     * no match. `null` will be returned if `cidrStr` does not represent an IP address.
+     */
+    static containsAny(cidrStr: string | IP, ipArr: (string | IP)[]): number | null;
+    /**
+     * Evaluate whether the IP address associated with `cidrStr` contains all IP addresses
+     * in the `ipArr` array.
+     * @param {string|IP} cidrStr
+     * @param {(string|IP)[]} ipArr An array of IP- or CIDR-representing strings or IP instances.
+     * @returns {boolean?} `null` if:
+     * * `cidrStr` does not represent an IP address.
+     * * `ipArr` is not an array or an empty array.
+     */
+    static containsAll(cidrStr: string | IP, ipArr: (string | IP)[]): boolean | null;
     /**
      * Evaluate whether the IP address associated with `ipStr1` equals `ipStr2`.
      * @param {string|IP} ipStr1
@@ -391,25 +417,46 @@ export class IP extends IPBase {
         last: IP;
     };
     /**
-     * Evaluate whether the IP address associated with this intance is within an IP range.
-     * @param {string|IP} range
-     * @returns {boolean?} `null` when `range` is not a valid IP address.
+     * Evaluate whether the IP address associated with this instance is within that associated with `cidrStr`.
+     * @param {string|IP} cidrStr
+     * @returns {boolean?} `null` when `cidrStr` is not a valid IP address.
      */
-    isInRange(range: string | IP): boolean | null;
+    isInRange(cidrStr: string | IP): boolean | null;
     /**
-     * Evaluate whether the IP address associated with this intance is within any IP range
-     * in the `ranges` array.
-     * @param {(string|IP)[]} ranges An array of IP- or CIDR-representing strings or IP instances.
-     * @returns {number} The index number of the first match in the `ranges` array, or `-1` otherwise.
+     * Evaluate whether the IP address associated with this instance is within any IP range
+     * in the `cidrArr` array.
+     * @param {(string|IP)[]} cidrArr An array of IP- or CIDR-representing strings or IP instances.
+     * @returns {number} The index number of the first match in the `cidrArr` array, or `-1` otherwise.
      */
-    isInAnyRange(ranges: (string | IP)[]): number;
+    isInAnyRange(cidrArr: (string | IP)[]): number;
     /**
-     * Evaluate whether the IP address associated with this intance is within all IP ranges
-     * in the `ranges` array.
-     * @param {(string|IP)[]} ranges An array of IP- or CIDR-representing strings or IP instances.
+     * Evaluate whether the IP address associated with this instance is within all IP ranges
+     * in the `cidrArr` array.
+     * @param {(string|IP)[]} cidrArr An array of IP- or CIDR-representing strings or IP instances.
      * @returns {boolean}
      */
-    isInAllRanges(ranges: (string | IP)[]): boolean;
+    isInAllRanges(cidrArr: (string | IP)[]): boolean;
+    /**
+     * Evaluate whether the IP address associated with this instance contains that associated
+     * with `ipStr`.
+     * @param {string|IP} ipStr
+     * @returns {boolean?} `null` when `ipStr` is not a valid IP address.
+     */
+    contains(ipStr: string | IP): boolean | null;
+    /**
+     * Evaluate whether the IP address associated with this instance contains any IP address
+     * in the `ipArr` array.
+     * @param {(string|IP)[]} ipArr An array of IP- or CIDR-representing strings or IP instances.
+     * @returns {number} The index number of the first match in the `ipArr` array, or `-1` otherwise.
+     */
+    containsAny(ipArr: (string | IP)[]): number;
+    /**
+     * Evaluate whether the IP address associated with this instance contains all IP addresses
+     * in the `ipArr` array.
+     * @param {(string|IP)[]} ipArr An array of IP- or CIDR-representing strings or IP instances.
+     * @returns {boolean}
+     */
+    containsAll(ipArr: (string | IP)[]): boolean;
     /**
      * Evaluate whether the IP address associated with this intance equals another IP address.
      * @param {string|IP} ipStr An IP- or CIDR-representing string, or an IP instance.
@@ -493,13 +540,14 @@ declare class IPBase {
      */
     protected static parseAndStringify(ipStr: string, options?: StringifyOptions | undefined): string | null;
     /**
-     * Check whether a given IP falls within a range.
-     * @param {RangeObject} ipObj An object of arrays of the IP parts in decimals.
-     * @param {string|IP} ipRange
-     * @returns {boolean?} `null` if `ipRange` does not represent an IP address.
+     * Compare two ranges to check their inclusion relationship.
+     * @param {RangeObject} ip1 An object of arrays of the IP parts in decimals.
+     * @param {string|IP} ip2
+     * @param {"<"|">"} comparator Which of `ip1` and `ip2` is expected to be broader.
+     * @returns {boolean?} `null` if `ip2` does not represent an IP address.
      * @protected
      */
-    protected static fallsWithin(ipObj: RangeObject, ipRange: string | IP): boolean | null;
+    protected static compareRanges(ip1: RangeObject, ip2: string | IP, comparator: "<" | ">"): boolean | null;
     /**
      * Given an IP string or instance, parse it into an object of arrays of decimals that
      * represent the parts of the first and last IPs.
