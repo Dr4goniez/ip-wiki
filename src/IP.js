@@ -225,12 +225,19 @@ class IPBase {
 	 * Parse an IP string into an array and convert back into a string.
 	 * @param {string} ipStr
 	 * @param {StringifyOptions} [options]
-	 * @returns {string?} `null` if the input string does not represent an IP address.
+	 * @param {ConditionPredicate} [conditionPredicate]
+	 * Optional IP address conditions to perform stringification.
+	 * @returns {string?} `null` if:
+	 * * The input string does not represent an IP address.
+	 * * The parsed IP address does not meet the conditions specified by `conditionPredicate`
 	 * @protected
 	 */
-	static parseAndStringify(ipStr, options = {}) {
+	static parseAndStringify(ipStr, options = {}, conditionPredicate) {
 		let {parts, bitLen} = this.parse(ipStr) || {parts: null, bitLen: null};
-		if (parts === null) {
+		if (
+			parts === null ||
+			conditionPredicate && !conditionPredicate(parts.length === 4 ? 4 : 6, bitLen !== null)
+		) {
 			return null;
 		}
 		// If CIDR, correct any inaccurate ones
@@ -343,10 +350,14 @@ class IPUtil extends IPBase {
 	 * * output: `fd12:3456:789a:1:0:0:0:0/64`
 	 * @param {string} ipStr
 	 * @param {boolean} [capitalize] Whether to capitalize the output, which defaults to `false`.
-	 * @returns {string?} `null` if the input string does not represent an IP address.
+	 * @param {ConditionPredicate} [conditionPredicate]
+	 * Optional IP address conditions to perform stringification.
+	 * @returns {string?} `null` if:
+	 * * The input string does not represent an IP address.
+	 * * The parsed IP address does not meet the conditions specified by `conditionPredicate`
 	 */
-	static sanitize(ipStr, capitalize = false) {
-		return this.parseAndStringify(ipStr, {capitalize});
+	static sanitize(ipStr, capitalize = false, conditionPredicate) {
+		return this.parseAndStringify(ipStr, {capitalize}, conditionPredicate);
 	}
 
 	/**
@@ -359,10 +370,14 @@ class IPUtil extends IPBase {
 	 * * output: `fd12:3456:789a:1::/64`
 	 * @param {string} ipStr
 	 * @param {boolean} [capitalize] Whether to capitalize the output, which defaults to `false`.
-	 * @returns {string?} `null` if the input string does not represent an IP address.
+	 * @param {ConditionPredicate} [conditionPredicate]
+	 * Optional IP address conditions to perform stringification.
+	 * @returns {string?} `null` if:
+	 * * The input string does not represent an IP address.
+	 * * The parsed IP address does not meet the conditions specified by `conditionPredicate`
 	 */
-	static abbreviate(ipStr, capitalize = false) {
-		return this.parseAndStringify(ipStr, {mode: 'short', capitalize});
+	static abbreviate(ipStr, capitalize = false, conditionPredicate) {
+		return this.parseAndStringify(ipStr, {mode: 'short', capitalize}, conditionPredicate);
 	}
 
 	/**
@@ -375,10 +390,14 @@ class IPUtil extends IPBase {
 	 * * output: `fd12:3456:789a:0001:0000:0000:0000:0000/64`
 	 * @param {string} ipStr
 	 * @param {boolean} [capitalize] Whether to capitalize the output, which defaults to `false`.
-	 * @returns {string?} `null` if the input string does not represent an IP address.
+	 * @param {ConditionPredicate} [conditionPredicate]
+	 * Optional IP address conditions to perform stringification.
+	 * @returns {string?} `null` if:
+	 * * The input string does not represent an IP address.
+	 * * The parsed IP address does not meet the conditions specified by `conditionPredicate`
 	 */
-	static lengthen(ipStr, capitalize = false) {
-		return this.parseAndStringify(ipStr, {mode: 'long', capitalize});
+	static lengthen(ipStr, capitalize = false, conditionPredicate) {
+		return this.parseAndStringify(ipStr, {mode: 'long', capitalize}, conditionPredicate);
 	}
 
 	/**

@@ -88,10 +88,10 @@ export interface StringifyOptions {
  */
 export type StrictCIDR = "strict";
 /**
- * The type of the optional callback function of {@link IPUtil.validate}.
- * @param version
- * @param isCidr
+ * The type of the optional callback function to filter out IP addresses that do not
+ * match the condition(s) specified by this predicate.
+ * @param version By default, both IPv4 and IPv6 addresses are acknowledged.
+ * @param isCidr By default, both CIDRs and non-CIDRs are acknowledged.
  * @returns
- * @internal
  */
 export type ConditionPredicate = (version: 4 | 6, isCidr: boolean) => boolean;

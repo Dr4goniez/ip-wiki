@@ -2,7 +2,8 @@ import {
     Parsed,
     RangeObject,
     StringifyOptions,
-    StrictCIDR
+    StrictCIDR,
+    ConditionPredicate
 } from './IP-types';
 /**
  * The IPUtil class. Unlike the {@link IP} class, this class provides several static methods
@@ -22,9 +23,13 @@ export class IPUtil extends IPBase {
      * * output: `fd12:3456:789a:1:0:0:0:0/64`
      * @param {string} ipStr
      * @param {boolean} [capitalize] Whether to capitalize the output, which defaults to `false`.
-     * @returns {string?} `null` if the input string does not represent an IP address.
+     * @param {ConditionPredicate} [conditionPredicate]
+     * Optional IP address conditions to perform stringification.
+     * @returns {string?} `null` if:
+     * * The input string does not represent an IP address.
+     * * The parsed IP address does not meet the conditions specified by `conditionPredicate`
      */
-    static sanitize(ipStr: string, capitalize?: boolean | undefined): string | null;
+    static sanitize(ipStr: string, capitalize?: boolean | undefined, conditionPredicate?: ConditionPredicate | undefined): string | null;
     /**
      * Abbreviate an IP-representing string. For example:
      * * `192.168.0.1` (for IPv4 addresses, same as {@link IPUtil.sanitize})
@@ -35,9 +40,13 @@ export class IPUtil extends IPBase {
      * * output: `fd12:3456:789a:1::/64`
      * @param {string} ipStr
      * @param {boolean} [capitalize] Whether to capitalize the output, which defaults to `false`.
-     * @returns {string?} `null` if the input string does not represent an IP address.
+     * @param {ConditionPredicate} [conditionPredicate]
+     * Optional IP address conditions to perform stringification.
+     * @returns {string?} `null` if:
+     * * The input string does not represent an IP address.
+     * * The parsed IP address does not meet the conditions specified by `conditionPredicate`
      */
-    static abbreviate(ipStr: string, capitalize?: boolean | undefined): string | null;
+    static abbreviate(ipStr: string, capitalize?: boolean | undefined, conditionPredicate?: ConditionPredicate | undefined): string | null;
     /**
      * Lengthen an IP-representing string. For example:
      * * `192.168.000.001`
@@ -48,9 +57,13 @@ export class IPUtil extends IPBase {
      * * output: `fd12:3456:789a:0001:0000:0000:0000:0000/64`
      * @param {string} ipStr
      * @param {boolean} [capitalize] Whether to capitalize the output, which defaults to `false`.
-     * @returns {string?} `null` if the input string does not represent an IP address.
+     * @param {ConditionPredicate} [conditionPredicate]
+     * Optional IP address conditions to perform stringification.
+     * @returns {string?} `null` if:
+     * * The input string does not represent an IP address.
+     * * The parsed IP address does not meet the conditions specified by `conditionPredicate`
      */
-    static lengthen(ipStr: string, capitalize?: boolean | undefined): string | null;
+    static lengthen(ipStr: string, capitalize?: boolean | undefined, conditionPredicate?: ConditionPredicate | undefined): string | null;
     /**
      * Validate a string as an IP address under certain conditions.
      * @overload
@@ -536,10 +549,14 @@ declare class IPBase {
      * Parse an IP string into an array and convert back into a string.
      * @param {string} ipStr
      * @param {StringifyOptions} [options]
-     * @returns {string?} `null` if the input string does not represent an IP address.
+     * @param {ConditionPredicate} [conditionPredicate]
+     * Optional IP address conditions to perform stringification.
+     * @returns {string?} `null` if:
+     * * The input string does not represent an IP address.
+     * * The parsed IP address does not meet the conditions specified by `conditionPredicate`
      * @protected
      */
-    protected static parseAndStringify(ipStr: string, options?: StringifyOptions | undefined): string | null;
+    protected static parseAndStringify(ipStr: string, options?: StringifyOptions | undefined, conditionPredicate?: ConditionPredicate | undefined): string | null;
     /**
      * Compare two ranges to check their inclusion relationship.
      * @param {RangeObject} ip1 An object of arrays of the IP parts in decimals.
