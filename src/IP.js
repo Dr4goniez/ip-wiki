@@ -35,7 +35,7 @@ class IPBase {
 	 * Parse a string that potentially represents an IP or CIDR address.
 	 * @param {string} ipStr
 	 * @param {number} [bitLen] An optional bit length of the IP address.
-	 * @returns {Parsed?} A parsed object, or `null` when:
+	 * @returns {Parsed?} A parsed object, or `null` if:
 	 * * `ipStr` is not a string.
 	 * * `ipStr` does not represent an IP address.
 	 * * `ipStr` contains an invalid bit length for a CIDR.
@@ -609,7 +609,7 @@ class IPUtil extends IPBase {
 	 * Evaluate whether the IP address associated with `ipStr` is within that associated with `cidrStr`.
 	 * @param {string|IP} ipStr
 	 * @param {string|IP} cidrStr
-	 * @returns {boolean?} `null` when either of the input IP addresses is (or both are) invalid.
+	 * @returns {boolean?} `null` if any of the two input strings does not represent an IP address.
 	 */
 	static isInRange(ipStr, cidrStr) {
 		const ip = this.getRangeObject(ipStr);
@@ -659,7 +659,7 @@ class IPUtil extends IPBase {
 	 * Evaluate whether the IP address associated with `cidrStr` contains that associated with `ipStr`.
 	 * @param {string|IP} cidrStr
 	 * @param {string|IP} ipStr
-	 * @returns {boolean?} `null` when either of the input IP addresses is (or both are) invalid.
+	 * @returns {boolean?} `null` if any of the two input strings does not represent an IP address.
 	 */
 	static contains(cidrStr, ipStr) {
 		const cidr = this.getRangeObject(cidrStr);
@@ -706,10 +706,10 @@ class IPUtil extends IPBase {
 	}
 
 	/**
-	 * Evaluate whether the IP address associated with `ipStr1` equals `ipStr2`.
+	 * Evaluate whether the IP address associated with `ipStr1` equals that associated with `ipStr2`.
 	 * @param {string|IP} ipStr1
 	 * @param {string|IP} ipStr2
-	 * @returns {boolean?} `null` when either of the input IP addresses is (or both are) invalid.
+	 * @returns {boolean?} `null` if any of the two input strings does not represent an IP address.
 	 */
 	static equals(ipStr1, ipStr2) {
 		const ip1 = this.getRangeObject(ipStr1);
@@ -721,38 +721,38 @@ class IPUtil extends IPBase {
 
 	/**
 	 * Evaluate whether the IP address associated with `ipStr` equals any IP address
-	 * in the `ips` array.
+	 * in the `ipArr` array.
 	 * @param {string|IP} ipStr
-	 * @param {(string|IP)[]} ips An array of IP- or CIDR-representing strings or IP instances.
-	 * @returns {number?} The index number of the first match in the `ips` array, or `-1` if there is
+	 * @param {(string|IP)[]} ipArr An array of IP- or CIDR-representing strings or IP instances.
+	 * @returns {number?} The index number of the first match in the `ipArr` array, or `-1` if there is
 	 * no match. `null` will be returned if `ipStr` does not represent an IP address.
 	 */
-	static equalsToAny(ipStr, ips) {
+	static equalsToAny(ipStr, ipArr) {
 		const ip1 = this.getRangeObject(ipStr);
 		if (ip1 === null) {
 			return null;
 		}
-		return ips.findIndex((ip2) => !!IP.checkEquality(ip1, ip2));
+		return ipArr.findIndex((ip2) => !!IP.checkEquality(ip1, ip2));
 	}
 
 	/**
 	 * Evaluate whether the IP address associated with `ipStr` equals all IP addresses
-	 * in the `ips` array.
+	 * in the `ipArr` array.
 	 * @param {string|IP} ipStr
-	 * @param {(string|IP)[]} ips An array of IP- or CIDR-representing strings or IP instances.
+	 * @param {(string|IP)[]} ipArr An array of IP- or CIDR-representing strings or IP instances.
 	 * @returns {boolean?} `null` if:
 	 * * `ipStr` does not represent an IP address.
-	 * * `ips` is not an array or an empty array.
+	 * * `ipArr` is not an array or an empty array.
 	 */
-	static equalsToAll(ipStr, ips) {
-		if (!Array.isArray(ips) || !ips.length) {
+	static equalsToAll(ipStr, ipArr) {
+		if (!Array.isArray(ipArr) || !ipArr.length) {
 			return null;
 		}
 		const ip1 = this.getRangeObject(ipStr);
 		if (ip1 === null) {
 			return null;
 		}
-		return ips.every((ip2) => !!IP.checkEquality(ip1, ip2));
+		return ipArr.every((ip2) => !!IP.checkEquality(ip1, ip2));
 	}
 
 }
@@ -767,7 +767,7 @@ class IP extends IPBase {
 	/**
 	 * Initialize an IP instance from a string.
 	 * @param {string} ipStr An IP- or CIDR-representing string.
-	 * @returns {IP?} `null` if the input string is invalid as an IP address.
+	 * @returns {IP?} `null` if the input string does not represent an IP address.
 	 */
 	static newFromText(ipStr) {
 		const {parts, bitLen} = this.parse(ipStr) || {parts: null, bitLen: null};
@@ -783,7 +783,7 @@ class IP extends IPBase {
 	 * will be overriden by `range`.
 	 * @param {number} range `0-32` for IPv4, `0-128` for IPv6.
 	 * @returns {IP?} `null` if:
-	 * * The input string is not a valid IP address.
+	 * * The input string does not represent an IP address.
 	 * * The bit length specified by `range` is invalid.
 	 * @throws If `range` is not a number.
 	 */
@@ -996,7 +996,7 @@ class IP extends IPBase {
 	/**
 	 * Evaluate whether the IP address associated with this instance is within that associated with `cidrStr`.
 	 * @param {string|IP} cidrStr
-	 * @returns {boolean?} `null` when `cidrStr` is not a valid IP address.
+	 * @returns {boolean?} `null` if `cidrStr` does not represent an IP address.
 	 */
 	isInRange(cidrStr) {
 		return IP.compareRanges(this.getProperties(), cidrStr, '<');
@@ -1031,7 +1031,7 @@ class IP extends IPBase {
 	 * Evaluate whether the IP address associated with this instance contains that associated
 	 * with `ipStr`.
 	 * @param {string|IP} ipStr
-	 * @returns {boolean?} `null` when `ipStr` is not a valid IP address.
+	 * @returns {boolean?} `null` if `ipStr` does not represent an IP address.
 	 */
 	contains(ipStr) {
 		return IP.compareRanges(this.getProperties(), ipStr, '>');
@@ -1063,7 +1063,8 @@ class IP extends IPBase {
 	}
 
 	/**
-	 * Evaluate whether the IP address associated with this intance equals another IP address.
+	 * Evaluate whether the IP address associated with this intance equals that associated
+	 * with `ipStr`.
 	 * @param {string|IP} ipStr An IP- or CIDR-representing string, or an IP instance.
 	 * @returns {boolean?} `null` if `ipStr` does not represent an IP address.
 	 */
@@ -1074,27 +1075,27 @@ class IP extends IPBase {
 
 	/**
 	 * Evaluate whether the IP address associated with this intance equals any IP address
-	 * in the `ips` array.
-	 * @param {(string|IP)[]} ips An array of IP- or CIDR-representing strings or IP instances.
+	 * in the `ipArr` array.
+	 * @param {(string|IP)[]} ipArr An array of IP- or CIDR-representing strings or IP instances.
 	 * @returns {number} The index number of the first match in the `ranges` array, or `-1` otherwise.
 	 */
-	equalsToAny(ips) {
+	equalsToAny(ipArr) {
 		const props = this.getProperties();
-		return ips.findIndex((ip) => !!IP.checkEquality(props, ip));
+		return ipArr.findIndex((ip) => !!IP.checkEquality(props, ip));
 	}
 
 	/**
 	 * Evaluate whether the IP address associated with this intance equals all IP addresses
-	 * in the `ips` array.
-	 * @param {(string|IP)[]} ips An array of IP- or CIDR-representing strings or IP instances.
+	 * in the `ipArr` array.
+	 * @param {(string|IP)[]} ipArr An array of IP- or CIDR-representing strings or IP instances.
 	 * @returns {boolean}
 	 */
-	equalsToAll(ips) {
-		if (!Array.isArray(ips) || !ips.length) {
+	equalsToAll(ipArr) {
+		if (!Array.isArray(ipArr) || !ipArr.length) {
 			return false;
 		}
 		const props = this.getProperties();
-		return ips.every((ip) => !!IP.checkEquality(props, ip));
+		return ipArr.every((ip) => !!IP.checkEquality(props, ip));
 	}
 
 };
