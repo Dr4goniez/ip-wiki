@@ -1,7 +1,7 @@
 # Same as .gitignore
 node_modules
 src/test.js
-memo.md
+types/memo.md
 
 # Configs for the development environment
 .eslintrc.json
