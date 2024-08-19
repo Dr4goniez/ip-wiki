@@ -3,7 +3,7 @@
 > [!NOTE]
 > This module has yet to be published. Please wait for version 1.x.x to get ready.
 
-`ip-wiki` is a JavaScript library that provides classes to manipulate IP and CIDR addresses. The library has been developed for use on Wikipedia, but it also works as a NodeJS module.
+`ip-wiki` is a JavaScript library written in ES6 that provides classes to manipulate IP and CIDR addresses. The library has been developed for use on Wikipedia, but it also works as a NodeJS module.
 
 - :heavy_check_mark: **[API documentation](https://dr4goniez.github.io/ip-wiki/index.html)** is avaiable!
 - :heavy_check_mark: The library can be used in TypeScript environments!
