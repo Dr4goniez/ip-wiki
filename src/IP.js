@@ -1017,11 +1017,11 @@ class IP extends IPBase {
 	 * Evaluate whether the IP address associated with this instance is within all IP ranges
 	 * in the `cidrArr` array.
 	 * @param {(string|IP)[]} cidrArr An array of IP- or CIDR-representing strings or IP instances.
-	 * @returns {boolean}
+	 * @returns {boolean?} `null` if `cidrArr` is not an array or an empty array.
 	 */
 	isInAllRanges(cidrArr) {
 		if (!Array.isArray(cidrArr) || !cidrArr.length) {
-			return false;
+			return null;
 		}
 		const props = this.getProperties();
 		return cidrArr.every((cidr) => !!IP.compareRanges(props, cidr, '<'));
@@ -1052,11 +1052,11 @@ class IP extends IPBase {
 	 * Evaluate whether the IP address associated with this instance contains all IP addresses
 	 * in the `ipArr` array.
 	 * @param {(string|IP)[]} ipArr An array of IP- or CIDR-representing strings or IP instances.
-	 * @returns {boolean}
+	 * @returns {boolean?} `null` if `ipArr` is not an array or an empty array.
 	 */
 	containsAll(ipArr) {
 		if (!Array.isArray(ipArr) || !ipArr.length) {
-			return false;
+			return null;
 		}
 		const props = this.getProperties();
 		return ipArr.every((ip) => !!IP.compareRanges(props, ip, '>'));
@@ -1088,11 +1088,11 @@ class IP extends IPBase {
 	 * Evaluate whether the IP address associated with this intance equals all IP addresses
 	 * in the `ipArr` array.
 	 * @param {(string|IP)[]} ipArr An array of IP- or CIDR-representing strings or IP instances.
-	 * @returns {boolean}
+	 * @returns {boolean?} `null` if `ipArr` is not an array or an empty array.
 	 */
 	equalsToAll(ipArr) {
 		if (!Array.isArray(ipArr) || !ipArr.length) {
-			return false;
+			return null;
 		}
 		const props = this.getProperties();
 		return ipArr.every((ip) => !!IP.checkEquality(props, ip));

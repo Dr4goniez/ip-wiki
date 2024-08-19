@@ -187,7 +187,7 @@ export class IPUtil extends IPBase {
      * Evaluate whether the IP address associated with `ipStr` is within that associated with `cidrStr`.
      * @param {string|IP} ipStr
      * @param {string|IP} cidrStr
-     * @returns {boolean?} `null` when either of the input IP addresses is (or both are) invalid.
+     * @returns {boolean?} `null` if any of the two input strings does not represent an IP address.
      */
     static isInRange(ipStr: string | IP, cidrStr: string | IP): boolean | null;
     /**
@@ -213,7 +213,7 @@ export class IPUtil extends IPBase {
      * Evaluate whether the IP address associated with `cidrStr` contains that associated with `ipStr`.
      * @param {string|IP} cidrStr
      * @param {string|IP} ipStr
-     * @returns {boolean?} `null` when either of the input IP addresses is (or both are) invalid.
+     * @returns {boolean?} `null` if any of the two input strings does not represent an IP address.
      */
     static contains(cidrStr: string | IP, ipStr: string | IP): boolean | null;
     /**
@@ -236,31 +236,31 @@ export class IPUtil extends IPBase {
      */
     static containsAll(cidrStr: string | IP, ipArr: (string | IP)[]): boolean | null;
     /**
-     * Evaluate whether the IP address associated with `ipStr1` equals `ipStr2`.
+     * Evaluate whether the IP address associated with `ipStr1` equals that associated with `ipStr2`.
      * @param {string|IP} ipStr1
      * @param {string|IP} ipStr2
-     * @returns {boolean?} `null` when either of the input IP addresses is (or both are) invalid.
+     * @returns {boolean?} `null` if any of the two input strings does not represent an IP address.
      */
     static equals(ipStr1: string | IP, ipStr2: string | IP): boolean | null;
     /**
      * Evaluate whether the IP address associated with `ipStr` equals any IP address
-     * in the `ips` array.
+     * in the `ipArr` array.
      * @param {string|IP} ipStr
-     * @param {(string|IP)[]} ips An array of IP- or CIDR-representing strings or IP instances.
-     * @returns {number?} The index number of the first match in the `ips` array, or `-1` if there is
+     * @param {(string|IP)[]} ipArr An array of IP- or CIDR-representing strings or IP instances.
+     * @returns {number?} The index number of the first match in the `ipArr` array, or `-1` if there is
      * no match. `null` will be returned if `ipStr` does not represent an IP address.
      */
-    static equalsToAny(ipStr: string | IP, ips: (string | IP)[]): number | null;
+    static equalsToAny(ipStr: string | IP, ipArr: (string | IP)[]): number | null;
     /**
      * Evaluate whether the IP address associated with `ipStr` equals all IP addresses
-     * in the `ips` array.
+     * in the `ipArr` array.
      * @param {string|IP} ipStr
-     * @param {(string|IP)[]} ips An array of IP- or CIDR-representing strings or IP instances.
+     * @param {(string|IP)[]} ipArr An array of IP- or CIDR-representing strings or IP instances.
      * @returns {boolean?} `null` if:
      * * `ipStr` does not represent an IP address.
-     * * `ips` is not an array or an empty array.
+     * * `ipArr` is not an array or an empty array.
      */
-    static equalsToAll(ipStr: string | IP, ips: (string | IP)[]): boolean | null;
+    static equalsToAll(ipStr: string | IP, ipArr: (string | IP)[]): boolean | null;
     /**
      * @throws
      * @hidden
@@ -277,7 +277,7 @@ export class IP extends IPBase {
     /**
      * Initialize an IP instance from a string.
      * @param {string} ipStr An IP- or CIDR-representing string.
-     * @returns {IP?} `null` if the input string is invalid as an IP address.
+     * @returns {IP?} `null` if the input string does not represent an IP address.
      */
     static newFromText(ipStr: string): IP | null;
     /**
@@ -286,7 +286,7 @@ export class IP extends IPBase {
      * will be overriden by `range`.
      * @param {number} range `0-32` for IPv4, `0-128` for IPv6.
      * @returns {IP?} `null` if:
-     * * The input string is not a valid IP address.
+     * * The input string does not represent an IP address.
      * * The bit length specified by `range` is invalid.
      * @throws If `range` is not a number.
      */
@@ -419,7 +419,7 @@ export class IP extends IPBase {
     /**
      * Evaluate whether the IP address associated with this instance is within that associated with `cidrStr`.
      * @param {string|IP} cidrStr
-     * @returns {boolean?} `null` when `cidrStr` is not a valid IP address.
+     * @returns {boolean?} `null` if `cidrStr` does not represent an IP address.
      */
     isInRange(cidrStr: string | IP): boolean | null;
     /**
@@ -433,14 +433,14 @@ export class IP extends IPBase {
      * Evaluate whether the IP address associated with this instance is within all IP ranges
      * in the `cidrArr` array.
      * @param {(string|IP)[]} cidrArr An array of IP- or CIDR-representing strings or IP instances.
-     * @returns {boolean}
+     * @returns {boolean?} `null` if `cidrArr` is not an array or an empty array.
      */
-    isInAllRanges(cidrArr: (string | IP)[]): boolean;
+    isInAllRanges(cidrArr: (string | IP)[]): boolean | null;
     /**
      * Evaluate whether the IP address associated with this instance contains that associated
      * with `ipStr`.
      * @param {string|IP} ipStr
-     * @returns {boolean?} `null` when `ipStr` is not a valid IP address.
+     * @returns {boolean?} `null` if `ipStr` does not represent an IP address.
      */
     contains(ipStr: string | IP): boolean | null;
     /**
@@ -454,29 +454,30 @@ export class IP extends IPBase {
      * Evaluate whether the IP address associated with this instance contains all IP addresses
      * in the `ipArr` array.
      * @param {(string|IP)[]} ipArr An array of IP- or CIDR-representing strings or IP instances.
-     * @returns {boolean}
+     * @returns {boolean?} `null` if `ipArr` is not an array or an empty array.
      */
-    containsAll(ipArr: (string | IP)[]): boolean;
+    containsAll(ipArr: (string | IP)[]): boolean | null;
     /**
-     * Evaluate whether the IP address associated with this intance equals another IP address.
+     * Evaluate whether the IP address associated with this intance equals that associated
+     * with `ipStr`.
      * @param {string|IP} ipStr An IP- or CIDR-representing string, or an IP instance.
      * @returns {boolean?} `null` if `ipStr` does not represent an IP address.
      */
     equals(ipStr: string | IP): boolean | null;
     /**
      * Evaluate whether the IP address associated with this intance equals any IP address
-     * in the `ips` array.
-     * @param {(string|IP)[]} ips An array of IP- or CIDR-representing strings or IP instances.
+     * in the `ipArr` array.
+     * @param {(string|IP)[]} ipArr An array of IP- or CIDR-representing strings or IP instances.
      * @returns {number} The index number of the first match in the `ranges` array, or `-1` otherwise.
      */
-    equalsToAny(ips: (string | IP)[]): number;
+    equalsToAny(ipArr: (string | IP)[]): number;
     /**
      * Evaluate whether the IP address associated with this intance equals all IP addresses
-     * in the `ips` array.
-     * @param {(string|IP)[]} ips An array of IP- or CIDR-representing strings or IP instances.
-     * @returns {boolean}
+     * in the `ipArr` array.
+     * @param {(string|IP)[]} ipArr An array of IP- or CIDR-representing strings or IP instances.
+     * @returns {boolean?} `null` if `ipArr` is not an array or an empty array.
      */
-    equalsToAll(ips: (string | IP)[]): boolean;
+    equalsToAll(ipArr: (string | IP)[]): boolean | null;
 }
 /**
  * Abstract class with protected methods.
@@ -499,7 +500,7 @@ declare class IPBase {
      * Parse a string that potentially represents an IP or CIDR address.
      * @param {string} ipStr
      * @param {number} [bitLen] An optional bit length of the IP address.
-     * @returns {Parsed?} A parsed object, or `null` when:
+     * @returns {Parsed?} A parsed object, or `null` if:
      * * `ipStr` is not a string.
      * * `ipStr` does not represent an IP address.
      * * `ipStr` contains an invalid bit length for a CIDR.
