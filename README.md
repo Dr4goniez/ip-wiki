@@ -5,9 +5,9 @@
 
 `ip-wiki` is a JavaScript library written in ES6 that provides classes to manipulate IP and CIDR addresses. The library has been developed for use on Wikipedia, but it also works as a NodeJS module.
 
-- :heavy_check_mark: **[API documentation](https://dr4goniez.github.io/ip-wiki/index.html)** is avaiable!
-- :heavy_check_mark: The library can be used in TypeScript environments!
-- :heavy_check_mark: No external dependencies!
+* **[API documentation](https://dr4goniez.github.io/ip-wiki/modules.html)** is avaiable!
+* The library can be used in TypeScript environments!
+* No external dependencies!
 
 ## Installation
 ```
@@ -125,4 +125,4 @@ console.log(ipv6Cidrs); // [ 'fd12:3456:789a:0:0:0:0:0/48', 'fd12:3456:789a:1:0:
 ```
 
 ### Methods
-For a number of other methods, see the **[API documentation](https://dr4goniez.github.io/ip-wiki/index.html)**!
+For a number of other methods, see the **[API documentation](https://dr4goniez.github.io/ip-wiki/modules.html)**!
