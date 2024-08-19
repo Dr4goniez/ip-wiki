@@ -1,6 +1,6 @@
 {
   "name": "ip-wiki",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "description": "An IP utility module.",
   "main": "src/IP.js",
   "types": "types/index.d.ts",

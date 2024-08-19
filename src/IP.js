@@ -727,7 +727,7 @@ class IPUtil extends IPBase {
 	 * @returns {number?} The index number of the first match in the `ipArr` array, or `-1` if there is
 	 * no match. `null` will be returned if `ipStr` does not represent an IP address.
 	 */
-	static equalsToAny(ipStr, ipArr) {
+	static equalsAny(ipStr, ipArr) {
 		const ip1 = this.getRangeObject(ipStr);
 		if (ip1 === null) {
 			return null;
@@ -744,7 +744,7 @@ class IPUtil extends IPBase {
 	 * * `ipStr` does not represent an IP address.
 	 * * `ipArr` is not an array or an empty array.
 	 */
-	static equalsToAll(ipStr, ipArr) {
+	static equalsAll(ipStr, ipArr) {
 		if (!Array.isArray(ipArr) || !ipArr.length) {
 			return null;
 		}
@@ -1079,7 +1079,7 @@ class IP extends IPBase {
 	 * @param {(string|IP)[]} ipArr An array of IP- or CIDR-representing strings or IP instances.
 	 * @returns {number} The index number of the first match in the `ranges` array, or `-1` otherwise.
 	 */
-	equalsToAny(ipArr) {
+	equalsAny(ipArr) {
 		const props = this.getProperties();
 		return ipArr.findIndex((ip) => !!IP.checkEquality(props, ip));
 	}
@@ -1090,7 +1090,7 @@ class IP extends IPBase {
 	 * @param {(string|IP)[]} ipArr An array of IP- or CIDR-representing strings or IP instances.
 	 * @returns {boolean?} `null` if `ipArr` is not an array or an empty array.
 	 */
-	equalsToAll(ipArr) {
+	equalsAll(ipArr) {
 		if (!Array.isArray(ipArr) || !ipArr.length) {
 			return null;
 		}

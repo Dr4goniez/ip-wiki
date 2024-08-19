@@ -250,7 +250,7 @@ export class IPUtil extends IPBase {
      * @returns {number?} The index number of the first match in the `ipArr` array, or `-1` if there is
      * no match. `null` will be returned if `ipStr` does not represent an IP address.
      */
-    static equalsToAny(ipStr: string | IP, ipArr: (string | IP)[]): number | null;
+    static equalsAny(ipStr: string | IP, ipArr: (string | IP)[]): number | null;
     /**
      * Evaluate whether the IP address associated with `ipStr` equals all IP addresses
      * in the `ipArr` array.
@@ -260,7 +260,7 @@ export class IPUtil extends IPBase {
      * * `ipStr` does not represent an IP address.
      * * `ipArr` is not an array or an empty array.
      */
-    static equalsToAll(ipStr: string | IP, ipArr: (string | IP)[]): boolean | null;
+    static equalsAll(ipStr: string | IP, ipArr: (string | IP)[]): boolean | null;
     /**
      * @throws
      * @hidden
@@ -470,14 +470,14 @@ export class IP extends IPBase {
      * @param {(string|IP)[]} ipArr An array of IP- or CIDR-representing strings or IP instances.
      * @returns {number} The index number of the first match in the `ranges` array, or `-1` otherwise.
      */
-    equalsToAny(ipArr: (string | IP)[]): number;
+    equalsAny(ipArr: (string | IP)[]): number;
     /**
      * Evaluate whether the IP address associated with this intance equals all IP addresses
      * in the `ipArr` array.
      * @param {(string|IP)[]} ipArr An array of IP- or CIDR-representing strings or IP instances.
      * @returns {boolean?} `null` if `ipArr` is not an array or an empty array.
      */
-    equalsToAll(ipArr: (string | IP)[]): boolean | null;
+    equalsAll(ipArr: (string | IP)[]): boolean | null;
 }
 /**
  * Abstract class with protected methods.
