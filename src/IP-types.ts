@@ -69,21 +69,21 @@ export interface StringifyOptions {
  * inaccurate in that the prefix `192.168.0.1` should instead be `192.168.0.0` for the bit
  * length of `24`.
  *
- * Without the validation mode on, `IP.isIP('192.168.0.1/24', true)` still returns `true`. But
+ * Without the validation mode on, `IPUtil.isIP('192.168.0.1/24', true)` still returns `true`. But
  * with it on, the relevant method will return a corrected CIDR as a string instead of a boolean
  * if the input string is potentially valid as a CIDR but is inaccurate:
  * ```
  * // allowCidr: false or undefined
- * console.log(IP.isIP('192.168.0.1')); // true
- * console.log(IP.isIP('192.168.0.1/24')); // false
+ * console.log(IPUtil.isIP('192.168.0.1')); // true
+ * console.log(IPUtil.isIP('192.168.0.1/24')); // false
  * // allowCidr: true
- * console.log(IP.isIP('192.168.0.1', true)); // true
- * console.log(IP.isIP('192.168.0.1/24', true)); // true
- * console.log(IP.isIP('192.168.0.0/24', true)); // true
+ * console.log(IPUtil.isIP('192.168.0.1', true)); // true
+ * console.log(IPUtil.isIP('192.168.0.1/24', true)); // true
+ * console.log(IPUtil.isIP('192.168.0.0/24', true)); // true
  * // allowCidr: 'strict'
- * console.log(IP.isIP('192.168.0.1', 'strict')); // true (just as when allowCidr is true)
- * console.log(IP.isIP('192.168.0.1/24', 'strict')); // 192.168.0.0/24
- * console.log(IP.isIP('192.168.0.0/24', 'strict')); // true
+ * console.log(IPUtil.isIP('192.168.0.1', 'strict')); // true (just as when allowCidr is true)
+ * console.log(IPUtil.isIP('192.168.0.1/24', 'strict')); // 192.168.0.0/24
+ * console.log(IPUtil.isIP('192.168.0.0/24', 'strict')); // true
  * ```
  */
 export type StrictCIDR = "strict";
