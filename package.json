@@ -1,6 +1,6 @@
 {
   "name": "ip-wiki",
-  "version": "0.4.2",
+  "version": "0.4.3",
   "description": "An IP utility module.",
   "main": "src/IP.js",
   "types": "types/index.d.ts",
@@ -32,6 +32,7 @@
   "homepage": "https://github.com/Dr4goniez/ip-wiki#readme",
   "devDependencies": {
     "@eslint/js": "^9.9.0",
+    "@stylistic/eslint-plugin-js": "^2.6.4",
     "@types/eslint__js": "^8.42.3",
     "eslint": "^9.9.0",
     "globals": "^15.9.0",

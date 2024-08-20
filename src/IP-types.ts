@@ -10,7 +10,7 @@ export interface Parsed {
 	 * The bit length if the parsed address is a CIDR.
 	 */
 	bitLen: number | null;
-};
+}
 /**
  * The architecture of the internal private properties of an instance of the {@link IP} class
  * (where a copy of the properties can be obtained by {@link IP#getProperties}).
@@ -38,7 +38,7 @@ export interface RangeObject {
 	 * `false` if the original address was not a CIDR.
 	 */
 	isCidr: boolean;
-};
+}
 /**
  * Options for how IP addresses should be formatted in the output.
  */
@@ -62,7 +62,7 @@ export interface StringifyOptions {
 	 * Whether to capitalize the output IP address.
 	 */
 	capitalize?: boolean;
-};
+}
 /**
  * The strict CIDR validation mode checks whether the input string is a genuinely valid CIDR,
  * ruling out unmatching prefixes. For example, the (potential) CIDR `192.168.0.1/24` is

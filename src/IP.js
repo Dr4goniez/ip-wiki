@@ -1,6 +1,6 @@
 /**
  * ip-wiki — IP Address Utility Library
- * @version 0.4.2
+ * @version 0.4.3
  * @see https://dr4goniez.github.io/ip-wiki/index.html API documentation
  * @internal
  */
@@ -1127,7 +1127,7 @@ class IP extends IPBase {
 		return ipArr.every((ip) => !!IP.checkEquality(props, ip));
 	}
 
-};
+}
 /**
  * @typedef {import('./IP-types.ts').Parsed} Parsed
  * @typedef {import('./IP-types.ts').RangeObject} RangeObject
