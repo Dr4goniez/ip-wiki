@@ -1,12 +1,19 @@
+/**
+ * ip-wiki — IP Address Utility Library
+ * @version 0.4.2
+ * @see https://dr4goniez.github.io/ip-wiki/index.html API documentation
+ * @internal
+ */
 // <nowiki>
 /**
  * Abstract class with protected methods.
+ * @abstract
  * @internal
  */
 class IPBase {
 
 	/**
-	 * @param {any} override
+	 * @param {boolean} override
 	 * @throws
 	 * @hidden
 	 */
@@ -224,7 +231,7 @@ class IPBase {
 	/**
 	 * Parse an IP string into an array and convert back into a string.
 	 * @param {string} ipStr
-	 * @param {StringifyOptions} [options]
+	 * @param {StringifyOptions} options
 	 * @param {ConditionPredicate} [conditionPredicate]
 	 * Optional IP address conditions to perform stringification.
 	 * @returns {string?} `null` if:
@@ -232,7 +239,7 @@ class IPBase {
 	 * * The parsed IP address does not meet the conditions specified by `conditionPredicate`
 	 * @protected
 	 */
-	static parseAndStringify(ipStr, options = {}, conditionPredicate) {
+	static parseAndStringify(ipStr, options, conditionPredicate) {
 		let {parts, bitLen} = this.parse(ipStr) || {parts: null, bitLen: null};
 		if (
 			parts === null ||
@@ -264,7 +271,7 @@ class IPBase {
 		if (![range1.last, range2.first, range2.last].every(({length}) => length === len)) {
 			return false;
 		}
-		let broader, narrower
+		let broader, narrower;
 		if (comparator === '<') {
 			broader = range2;
 			narrower = range1;
@@ -356,8 +363,8 @@ class IPUtil extends IPBase {
 	 * * The input string does not represent an IP address.
 	 * * The parsed IP address does not meet the conditions specified by `conditionPredicate`
 	 */
-	static sanitize(ipStr, capitalize = false, conditionPredicate) {
-		return this.parseAndStringify(ipStr, {capitalize}, conditionPredicate);
+	static sanitize(ipStr, capitalize, conditionPredicate) {
+		return this.parseAndStringify(ipStr, {capitalize: !!capitalize}, conditionPredicate);
 	}
 
 	/**
@@ -376,8 +383,8 @@ class IPUtil extends IPBase {
 	 * * The input string does not represent an IP address.
 	 * * The parsed IP address does not meet the conditions specified by `conditionPredicate`
 	 */
-	static abbreviate(ipStr, capitalize = false, conditionPredicate) {
-		return this.parseAndStringify(ipStr, {mode: 'short', capitalize}, conditionPredicate);
+	static abbreviate(ipStr, capitalize, conditionPredicate) {
+		return this.parseAndStringify(ipStr, {mode: 'short', capitalize: !!capitalize}, conditionPredicate);
 	}
 
 	/**
@@ -396,8 +403,8 @@ class IPUtil extends IPBase {
 	 * * The input string does not represent an IP address.
 	 * * The parsed IP address does not meet the conditions specified by `conditionPredicate`
 	 */
-	static lengthen(ipStr, capitalize = false, conditionPredicate) {
-		return this.parseAndStringify(ipStr, {mode: 'long', capitalize}, conditionPredicate);
+	static lengthen(ipStr, capitalize, conditionPredicate) {
+		return this.parseAndStringify(ipStr, {mode: 'long', capitalize: !!capitalize}, conditionPredicate);
 	}
 
 	/**
@@ -471,6 +478,7 @@ class IPUtil extends IPBase {
 	 * @param {StringifyOptions} [options]
 	 * @returns {boolean|string}
 	 */
+	// eslint-disable-next-line default-param-last
 	static isIP(ipStr, allowCidr = false, options) {
 		return typeof allowCidr === 'boolean' ?
 			this.validate(ipStr, allowCidr) :
@@ -499,6 +507,7 @@ class IPUtil extends IPBase {
 	 * @param {StringifyOptions} [options]
 	 * @returns {boolean|string}
 	 */
+	// eslint-disable-next-line default-param-last
 	static isIPv4(ipStr, allowCidr = false, options) {
 		/** @type {ConditionPredicate} */
 		const cond = (version) => version === 4;
@@ -529,6 +538,7 @@ class IPUtil extends IPBase {
 	 * @param {StringifyOptions} [options]
 	 * @returns {boolean|string}
 	 */
+	// eslint-disable-next-line default-param-last
 	static isIPv6(ipStr, allowCidr = false, options) {
 		/** @type {ConditionPredicate} */
 		const cond = (version) => version === 6;
@@ -988,7 +998,7 @@ class IP extends IPBase {
 	 * @param {StringifyOptions} [options]
 	 * @returns {{bitLen: number; cidr: string; first: string|IP; last: string|IP;}}
 	 */
-	getRange(getObject = false, options) {
+	getRange(getObject, options = {}) {
 		let {first, last, bitLen, isCidr} = this.getProperties();
 		if (!getObject) {
 			const firstStr = IP.stringify(first, '', options);

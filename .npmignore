@@ -4,7 +4,7 @@ src/test.js
 types/memo.md
 
 # Configs for the development environment
-.eslintrc.json
+eslint.config.mjs
 tsconfig.json
 typedoc.json
 

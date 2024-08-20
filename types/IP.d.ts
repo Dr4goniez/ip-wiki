@@ -493,7 +493,13 @@ export class IP extends IPBase {
     equalsAll(ipArr: (string | IP)[]): boolean | null;
 }
 /**
+ * ip-wiki — IP Address Utility Library
+ * @version 0.4.2
+ * @see https://dr4goniez.github.io/ip-wiki/index.html API documentation
+ */
+/**
  * Abstract class with protected methods.
+ * @abstract
  * @internal
  */
 declare class IPBase {
@@ -548,7 +554,7 @@ declare class IPBase {
     /**
      * Parse an IP string into an array and convert back into a string.
      * @param {string} ipStr
-     * @param {StringifyOptions} [options]
+     * @param {StringifyOptions} options
      * @param {ConditionPredicate} [conditionPredicate]
      * Optional IP address conditions to perform stringification.
      * @returns {string?} `null` if:
@@ -556,7 +562,7 @@ declare class IPBase {
      * * The parsed IP address does not meet the conditions specified by `conditionPredicate`
      * @protected
      */
-    protected static parseAndStringify(ipStr: string, options?: StringifyOptions | undefined, conditionPredicate?: ConditionPredicate | undefined): string | null;
+    protected static parseAndStringify(ipStr: string, options: StringifyOptions, conditionPredicate?: ConditionPredicate | undefined): string | null;
     /**
      * Compare two ranges to check their inclusion relationship.
      * @param {RangeObject} ip1 An object of arrays of the IP parts in decimals.
@@ -583,10 +589,10 @@ declare class IPBase {
      */
     protected static checkEquality(ipObj: RangeObject, ipStr: string | IP): boolean | null;
     /**
-     * @param {any} override
+     * @param {boolean} override
      * @throws
      * @hidden
      */
-    constructor(override: any);
+    constructor(override: boolean);
 }
 export {};
