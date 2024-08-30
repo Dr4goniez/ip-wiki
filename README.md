@@ -1,12 +1,9 @@
 # `ip-wiki` — IP Address Utility Library for Wikipedia and NodeJS
 
-> [!NOTE]
-> This module has yet to be published. Please wait for version 1.x.x to get ready.
-
-`ip-wiki` is a JavaScript library written in ES6 that provides classes to manipulate IP and CIDR addresses. The library has been developed for use on Wikipedia, but it also works as a NodeJS module.
+`ip-wiki` is a JavaScript library written in ES6 that provides classes for manipulating IP and CIDR addresses. As the name suggests, it was developed for use on (front-end) Wikipedia; however, it also works as a NodeJS module in back-end environments.
 
 * **[API documentation](https://dr4goniez.github.io/ip-wiki/modules.html)** is avaiable!
-* The library can be used in TypeScript environments!
+* The library is TypeScript-compatible!
 * No external dependencies!
 
 ## Installation
@@ -72,7 +69,7 @@ This library has two main classes: the [IP](https://dr4goniez.github.io/ip-wiki/
 * Use the IPUtil class for one-time manipulations (i.e. when there is no need to create a class instance).
 
 ### Class IP
-Suppose that you need to retrieve the indexes of IP-representing elements in `ipArr` array that equal the IP address `192.168.1.1`:
+Suppose that you need to retrieve the indexes of IP-representing elements in the `ipArr` array that equal the IP address `192.168.1.1`:
 ```js
 const ip = IP.newFromText('192.168.1.1');
 if (!ip) {

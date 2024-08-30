@@ -1,7 +1,7 @@
 {
   "name": "ip-wiki",
-  "version": "0.4.3",
-  "description": "An IP utility module.",
+  "version": "1.0.0",
+  "description": "An IP address utility library for Wikipedia and NodeJS.",
   "main": "src/IP.js",
   "types": "types/index.d.ts",
   "scripts": {
@@ -37,6 +37,7 @@
     "eslint": "^9.9.0",
     "globals": "^15.9.0",
     "typedoc": "^0.26.5",
+    "types-mediawiki": "^1.8.0",
     "typescript": "^5.5.4",
     "typescript-eslint": "^8.2.0"
   }

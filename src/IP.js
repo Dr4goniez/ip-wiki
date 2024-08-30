@@ -1,10 +1,10 @@
 /**
  * ip-wiki — IP Address Utility Library
- * @version 0.4.3
+ * @version 1.0.0
  * @see https://dr4goniez.github.io/ip-wiki/index.html API documentation
  * @internal
  */
-// <nowiki>
+//<nowiki>
 /**
  * Abstract class with protected methods.
  * @abstract
@@ -333,8 +333,6 @@ class IPBase {
  * The IPUtil class. Unlike the {@link IP} class, this class provides several static methods
  * that can be used to perform validations on an IP or CIDR address just once, or on varying
  * IP or CIDR addresses.
- *
- * Note that inherited protected methods are only for internal use.
  */
 class IPUtil extends IPBase {
 
@@ -789,7 +787,14 @@ class IPUtil extends IPBase {
  * The IP class. Unlike the static {@link IPUtil} class, this class provides several instance methods
  * that can be used to perform validations on the same IP or CIDR address multiple times.
  *
- * Note that inherited protected methods are only for internal use.
+ * To initialize a new instance, use {@link IP.newFromText} (or {@link IP.newFromRange}):
+ * ```
+ * const ip = IP.newFromText('fd12:3456:789a:1::1');
+ * if (!ip) {
+ * 	return;
+ * }
+ * console.log(ip.stringify()); // fd12:3456:789a:1:0:0:0:1
+ * ```
  */
 class IP extends IPBase {
 
@@ -1139,4 +1144,4 @@ module.exports = {
 	IPUtil,
 	IP
 };
-// </nowiki>
+//</nowiki>
