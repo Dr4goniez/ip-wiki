@@ -4,6 +4,10 @@
   "description": "An IP address utility library for Wikipedia and NodeJS.",
   "main": "src/IP.js",
   "types": "types/index.d.ts",
+  "files": [
+    "src/IP.js",
+    "types/*.d.ts"
+  ],
   "scripts": {
     "test": "node src/test.js",
     "build": "tsc -p .",
