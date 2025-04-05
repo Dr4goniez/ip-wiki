@@ -1,6 +1,6 @@
 {
   "name": "ip-wiki",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "An IP address utility library for Wikipedia and NodeJS.",
   "main": "src/IP.js",
   "types": "types/index.d.ts",

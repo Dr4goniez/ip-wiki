@@ -1,6 +1,6 @@
 /**
  * ip-wiki — IP Address Utility Library
- * @version 1.0.0
+ * @version 1.0.1
  * @see https://dr4goniez.github.io/ip-wiki/index.html API documentation
  * @internal
  */
