@@ -499,7 +499,7 @@ export class IP extends IPBase {
 }
 /**
  * ip-wiki — IP Address Utility Library
- * @version 1.0.1
+ * @version 1.0.2
  * @see https://dr4goniez.github.io/ip-wiki/index.html API documentation
  * @internal
  */
