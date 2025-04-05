@@ -1,10 +1,12 @@
 # `ip-wiki` — IP Address Utility Library for Wikipedia and NodeJS
 
-`ip-wiki` is a JavaScript library written in ES6 that provides classes for manipulating IP and CIDR addresses. As the name suggests, it was developed for use on (front-end) Wikipedia; however, it also works as a NodeJS module in back-end environments.
+`ip-wiki` is a JavaScript library written in ES6 that provides classes for manipulating IP and CIDR addresses. As the name suggests, it was developed for use on Wikipedia (primarily front-end), but it also works as a Node.js module in back-end environments.
 
 * **[API documentation](https://dr4goniez.github.io/ip-wiki/modules.html)** is avaiable!
-* The library is TypeScript-compatible!
+* TypeScript-compatible!
 * No external dependencies!
+
+[![npm](https://nodei.co/npm/ip-wiki.png?downloads=true&downloadRank=true)](https://nodei.co/npm/ip-wiki/)
 
 ## Installation
 ```
@@ -19,19 +21,19 @@ npm install -D ip-wiki
 ### NodeJS
 In CommonJS:
 ```js
-const {IP, IPUtil} = require('ip-wiki');
+const { IP, IPUtil } = require('ip-wiki');
 ```
 In ES modules:
 ```js
-import {IP, IPUtil} from 'ip-wiki';
+import { IP, IPUtil } from 'ip-wiki';
 ```
 Then:
 
-![Intellisense for NodeJS projects.](assets/Intellisense_nodejs.png)
+![Intellisense for NodeJS projects.](https://raw.githubusercontent.com/Dr4goniez/ip-wiki/refs/heads/main/assets/Intellisense_nodejs.png)
 
 ### Wikipedia
 
-Load and import [ja:MediaWiki:Gadget-ip-wiki.js](https://ja.wikipedia.org/wiki/MediaWiki:Gadget-ip-wiki.js). In this case, this package is for Intellisense (you may also want to install [types-mediawiki](https://www.npmjs.com/package/types-mediawiki) as a dev dependency).
+Load and import [ja:MediaWiki:Gadget-ip-wiki.js](https://ja.wikipedia.org/wiki/MediaWiki:Gadget-ip-wiki.js). In this case, this package is for Intellisense. (You may also want to install [types-mediawiki](https://www.npmjs.com/package/types-mediawiki) as a dev dependency.)
 ```js
 /**
  * @returns {JQueryPromise<import('ip-wiki')>}
@@ -42,11 +44,11 @@ function getIpWiki() {
 }
 
 getIpWiki().then((ipWiki) => {
-	const {IP, IPUtil} = ipWiki;
+	const { IP, IPUtil } = ipWiki;
 	// ...
 });
 ```
-Note that you may need to cross-wiki-load the gadget if a module named `ip-wiki` is not defined in the local Gadgets-definition:
+If a module named `ip-wiki` is not defined in the local Gadgets-definition, you may need to cross-wiki-load the gadget:
 ```js
 /**
  * @returns {JQueryPromise<import('ip-wiki')>}
@@ -61,15 +63,15 @@ function getIpWikiX() {
 
 Then:
 
-![Intellisense for Wikipedia projects.](assets/Intellisense_wiki.png)
+![Intellisense for Wikipedia projects.](https://raw.githubusercontent.com/Dr4goniez/ip-wiki/refs/heads/main/assets/Intellisense_wiki.png)
 
 ## Class showcases
 This library has two main classes: the [IP](https://dr4goniez.github.io/ip-wiki/classes/IP.html) class and the static [IPUtil](https://dr4goniez.github.io/ip-wiki/classes/IPUtil.html) class:
-* Use the IP class when you need to do manipulations on the same IP recursively (more efficient than to use IPUtil because we can skip the parsing process of the relevant input IP string).
-* Use the IPUtil class for one-time manipulations (i.e. when there is no need to create a class instance).
+* Use the `IP` class when you need to repeatedly manipulate the same IP address. This is more efficient than using `IPUtil`, as it avoids re-parsing the IP string.
+* Use the `IPUtil` class for one-off manipulations (i.e. when you don’t need to instantiate a class).
 
-### Class IP
-Suppose that you need to retrieve the indexes of IP-representing elements in the `ipArr` array that equal the IP address `192.168.1.1`:
+### Class: `IP`
+Suppose you want to retrieve the indexes of elements in the `ipArr` array that match the IP address `192.168.1.1`:
 ```js
 const ip = IP.newFromText('192.168.1.1');
 if (!ip) {
@@ -90,8 +92,8 @@ console.log(indexes); // [ 0, 2 ]
 
 ```
 
-### Class IPUtil
-Suppose that you need to filter the `ipArr` array so that it will only contain IPv6 addresses and CIDRs:
+### Class: `IPUtil`
+Suppose you want to filter `ipArr` to include only IPv6 addresses and CIDRs:
 ```js
 const ipArr = [
 	'192.168.1.1/32',
@@ -102,7 +104,7 @@ const filtered = ipArr.filter((ip) => IPUtil.isIPv6(ip, true));
 console.log(filtered); // [ '::1' ]
 ```
 
-Suppose that you need to create an array of IPv6 CIDRs in their sanitized notations out of the `ipArr` array:
+Suppose you want to extract an array of IPv6 CIDRs in their sanitized form:
 ```js
 const ipArr = [
 	'foo',
@@ -122,4 +124,4 @@ console.log(ipv6Cidrs); // [ 'fd12:3456:789a:0:0:0:0:0/48', 'fd12:3456:789a:1:0:
 ```
 
 ### Methods
-For a number of other methods, see the **[API documentation](https://dr4goniez.github.io/ip-wiki/modules.html)**!
+For more methods and detailed usage, see the **[API documentation](https://dr4goniez.github.io/ip-wiki/modules.html)**!
