@@ -827,6 +827,45 @@ class IP extends IPBase {
 	}
 
 	/**
+	 * Returns the stringified form of this IP or CIDR block in an abbreviated format.
+	 *
+	 * This is a shorthand method of {@link stringify} with the {@link StringifyOptions.mode | mode}
+	 * option set to `'short'`.
+	 *
+	 * @param {boolean} [capitalize=false] Whether to capitalize the output.
+	 * @returns A properly formatted string representation of the IP or CIDR.
+	 */
+	abbreviate(capitalize = false) {
+		return this.stringify({capitalize, mode: 'short'});
+	}
+
+	/**
+	 * Returns the stringified form of this IP or CIDR block in a sanitized format.
+	 *
+	 * This is a shorthand method of {@link stringify} with the {@link StringifyOptions.mode | mode}
+	 * option unset.
+	 *
+	 * @param {boolean} [capitalize=false] Whether to capitalize the output.
+	 * @returns A properly formatted string representation of the IP or CIDR.
+	 */
+	sanitize(capitalize = false) {
+		return this.stringify({capitalize});
+	}
+
+	/**
+	 * Returns the stringified form of this IP or CIDR block in a lengthened format.
+	 *
+	 * This is a shorthand method of {@link stringify} with the {@link StringifyOptions.mode | mode}
+	 * option set to `'long'`.
+	 *
+	 * @param {boolean} [capitalize=false] Whether to capitalize the output.
+	 * @returns A properly formatted string representation of the IP or CIDR.
+	 */
+	lengthen(capitalize = false) {
+		return this.stringify({capitalize, mode: 'long'});
+	}
+
+	/**
 	 * Checks whether the current instance represents an IPv4 address.
 	 *
 	 * @param {boolean} [allowCidr=false] Whether to allow a CIDR address.
