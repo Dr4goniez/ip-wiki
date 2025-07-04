@@ -14,27 +14,27 @@ export interface Parsed {
      */
     bitLen: number | null;
 }
+
 /**
  * The structure of the internal private properties of an {@link IP} instance.
- * (A copy of these properties can be retrieved using {@link IP.getProperties}.)
  *
- * This object represents the parsing result of the original IP string, forcibly interpreted
- * as a CIDR address. "Forcible interpretation" refers to the internal conversion of any IP
- * address into CIDR form, e.g., `192.168.0.1` → `192.168.0.1/32`, stored as arrays of decimals
- * along with a bit length. The `isCidr` property indicates whether the original input really was
- * a CIDR.
+ * Represents the parsing result of the original IP string, forcibly interpreted
+ * as a CIDR address. "Forcible interpretation" means any address is treated as
+ * CIDR internally, even single IPs like `192.168.0.1 → 192.168.0.1/32`.
+ *
+ * @interface
  */
 export interface RangeObject {
 	/**
-	 * An array of decimal numbers representing the first IP in the CIDR range.
+	 * Array of decimals for the first IP in the range.
 	 */
 	first: number[];
 	/**
-	 * An array of decimal numbers representing the last IP in the CIDR range.
+	 * Array of decimals for the last IP in the range.
 	 */
 	last: number[];
 	/**
-	 * The bit length of the CIDR address.
+	 * CIDR bit length used for the range.
 	 */
 	bitLen: number;
 	/**
@@ -42,6 +42,7 @@ export interface RangeObject {
 	 */
 	isCidr: boolean;
 }
+
 /**
  * Options for formatting IP addresses in the output.
  */
@@ -66,6 +67,7 @@ export interface StringifyOptions {
 	 */
 	capitalize?: boolean;
 }
+
 /**
  * The strict CIDR validation mode ensures that CIDR addresses have a matching prefix
  * for the specified bit length. If a CIDR string is technically valid but the prefix

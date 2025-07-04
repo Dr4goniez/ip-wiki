@@ -138,14 +138,20 @@ class IPBase {
 	}
 
 	/**
-	 * Returns the first and last IPs in the given range.
+	 * Returns the first and last IPs in the given CIDR range.
 	 *
-	 * @param {number[]} parts Decimal parts of the IP address.
-	 * @param {number?} bitLen Optional CIDR bit length.
-	 * @returns {RangeObject}
+	 * Accepts both IPv4 and IPv6 addresses, represented as arrays of decimal parts.
+	 * If no `bitLen` is provided, the address is treated as a single host.
+	 *
+	 * @param {number[]} parts Array of decimal IP parts:
+	 * - 4 elements for IPv4 (each `0–255`)
+	 * - 8 elements for IPv6 (each `0–65535`)
+	 * @param {number?} bitLen Optional CIDR bit length (`0–32` for IPv4, `0–128` for IPv6).
+	 * @returns {RangeObject} Object with first and last IPs in range.
+	 * @throws {Error} If `parts` is not a valid IPv4 or IPv6 array.
 	 * @protected
 	 */
-	static parseRange(parts, bitLen) {
+	static _parseRange(parts, bitLen) {
 
 		if (parts.length !== 4 && parts.length !== 8) {
 			throw new Error(`Unexpected error: The IP has ${parts.length} parts.`);
@@ -289,7 +295,7 @@ class IPBase {
 			return null;
 		}
 		// If CIDR, correct any inaccurate ones
-		parts = this.parseRange(parts, bitLen).first;
+		parts = this._parseRange(parts, bitLen).first;
 		const suffix = bitLen !== null ? '/' + bitLen : '';
 		return this.stringify(parts, suffix, options);
 	}
@@ -346,7 +352,7 @@ class IPBase {
 			if (!parts) {
 				return null;
 			}
-			return this.parseRange(parts, bitLen);
+			return this._parseRange(parts, bitLen);
 		}
 	}
 
@@ -490,7 +496,7 @@ class IPUtil extends IPBase {
 		}
 		if (allowCidr === 'strict' && isCidr) {
 			// On strict CIDR validation mode, return a corrected CIDR if the prefix is inaccurate
-			const {first} = this.parseRange(parts, bitLen);
+			const {first} = this._parseRange(parts, bitLen);
 			if (!first.every((num, i) => num === parts[i])) {
 				return this.stringify(first, '/' + bitLen, options);
 			}
@@ -747,7 +753,7 @@ class IP extends IPBase {
 		if (!parts) {
 			return null;
 		}
-		return new IP(this.parseRange(parts, bitLen));
+		return new IP(this._parseRange(parts, bitLen));
 	}
 
 	/**
@@ -767,7 +773,7 @@ class IP extends IPBase {
 		if (!parts || bitLen === null) { // bitLen should never be null, though
 			return null;
 		}
-		return new IP(this.parseRange(parts, bitLen));
+		return new IP(this._parseRange(parts, bitLen));
 	}
 
 	/**
