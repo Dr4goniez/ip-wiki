@@ -5,40 +5,54 @@
  */
 //<nowiki>
 /**
- * Abstract class with protected methods for IP handling.
+ * Abstract class with protected static utilities for IP handling.
+ * Designed to be subclassed by static utility classes or instantiable IP objects.
+ *
+ * Prevents direct instantiation via constructor guard.
+ *
  * @abstract
  */
 class IPBase {
 
-	/**
-	 * Constructor for abstract class.
-	 * Throws an error if called directly.
-	 *
-	 * @param {boolean} override Must be `true` to instantiate.
-	 * @throws {Error} If `override` is not `true`.
-	 * @hidden
-	 */
-	constructor(override) {
-		if (override !== true) {
-			throw new Error('It is not allowed to create an instance of the abstract class.');
-		}
-	}
+    /**
+     * Constructor for abstract class.
+     * Subclasses must explicitly pass `true` to override the instantiation guard.
+     *
+     * This pattern enforces that only intended subclasses can be instantiated,
+     * while pure-static subclasses (with no `super()` call) avoid the constructor entirely.
+     *
+     * @param {boolean} override Must be `true` to instantiate.
+     * @throws {Error} If `override` is not `true`.
+     * @hidden
+     */
+    constructor(override) {
+        if (override !== true) {
+            throw new Error('IPBase is abstract and cannot be instantiated directly.');
+        }
+    }
 
-	/**
-	 * Returns a trimmed string with all Unicode bidirectional characters removed.
-	 *
-	 * Unicode bidirectional characters are special invisible characters that can slip into
-	 * cut-and-pasted strings, which are shown as red dots in WikiEditor. They can cause issues
-	 * when parsing IP addresses.
-	 *
-	 * @see MediaWikiTitleCodec::splitTitleString in MediaWiki core
-	 *
-	 * @param {string} str
-	 * @returns {string}
-	 */
-	static clean(str) {
-		return str.replace(/[\u200E\u200F\u202A-\u202E]+/g, '').trim();
-	}
+    /**
+     * Removes Unicode bidirectional control characters and trims whitespace.
+     *
+     * These invisible characters (e.g., LRM, RLM, directional overrides) can appear
+     * when copying IPs from external sources, especially in web editors.
+     *
+     * Their presence can interfere with IP parsing, matching, or display logic.
+     *
+     * The specific characters removed are:
+     * - U+200E LEFT-TO-RIGHT MARK (LRM)
+     * - U+200F RIGHT-TO-LEFT MARK (RLM)
+     * - U+202A to U+202E (directional overrides)
+     *
+     * This logic mirrors cleanup done in MediaWiki core:
+     * {@link https://gerrit.wikimedia.org/g/mediawiki/core/+/HEAD/includes/title/TitleParser.php TitleParser::splitTitleString}
+     *
+     * @param {string} str Input string (may contain invisible bidi characters).
+     * @returns {string} Cleaned string, safe for IP parsing.
+     */
+    static clean(str) {
+        return str.replace(/[\u200E\u200F\u202A-\u202E]+/g, '').trim();
+    }
 
 	/**
 	 * Parses a string potentially representing an IP or CIDR address.
@@ -364,7 +378,7 @@ class IPUtil extends IPBase {
 	 */
 	constructor() {
 		super(true);
-		throw new Error('It is not allowed to create an instance of the static class.');
+		throw new Error('Static class cannot be instantiated.');
 	}
 
 	/**
