@@ -55,53 +55,62 @@ class IPBase {
     }
 
 	/**
-	 * Parses a string potentially representing an IP or CIDR address.
+	 * Parses a string potentially representing an IP address or CIDR.
+	 *
+	 * Supports both IPv4 and IPv6 formats, optionally with CIDR bit lengths.
+	 * Returns `null` if the input is invalid or outside expected ranges.
+	 *
+	 * Accepted formats:
+	 * - IPv4: `'x.x.x.x'` or `'x.x.x.x/bitLen'`, where x = `0–255`, bitLen = `0–32`
+	 * - IPv6: `'xxxx:xxxx:xxxx:xxxx:xxxx:xxxx:xxxx:xxxx'` or shortened `'::'` forms,
+	 *   optional `'/bitLen'` with bitLen = `0–128`
+	 *
+	 * Limitations:
+	 * - Does not handle IPv4-mapped IPv6 addresses (e.g., `::ffff:192.168.0.1`).
 	 *
 	 * @param {string} ipStr The string to parse.
-	 * @param {number} [bitLen] Optional bit length for CIDR parsing.
-	 * @returns {Parsed?} A parsed object, or `null` if:
-	 * * `ipStr` is not a string.
-	 * * It does not represent a valid IP address.
-	 * * It contains an invalid CIDR bit length.
+	 * @param {number} [bitLen] Optional bit length to enforce for CIDR.
+	 * @returns {Parsed?} A parsed object with parts and optional bit length, or `null` if invalid.
 	 * @protected
 	 */
-	static parse(ipStr, bitLen) {
-
+	static _parse(ipStr, bitLen) {
 		if (typeof ipStr !== 'string') {
 			return null;
 		}
+
 		ipStr = this.clean(ipStr);
 		if (typeof bitLen === 'number') {
-			ipStr = ipStr.replace(/\/\d+$/, '');
-			ipStr += '/' + bitLen;
+			ipStr = ipStr.replace(/\/\d+$/, '') + '/' + bitLen;
 		}
 
-		let m;
-		if ((m = ipStr.match(/^(\d+)\.(\d+)\.(\d+)\.(\d+)(?:\/(\d+))?$/))) {
-			// Potential IPv4
+		// IPv4 pattern
+		let m = ipStr.match(/^(\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})(?:\/(\d{1,3}))?$/);
+		if (m) {
 			/** @type {Parsed} */
 			const ret = {
 				parts: [],
-				bitLen: typeof m[5] === 'string' ? parseInt(m[5]) : null
+				bitLen: m[5] !== undefined ? parseInt(m[5], 10) : null
 			};
 			if (ret.bitLen !== null && !(0 <= ret.bitLen && ret.bitLen <= 32)) {
 				return null;
 			}
 			for (let i = 1; i <= 4; i++) {
-				const num = parseInt(m[i]);
-				if (m[i].length <= 3 && 0 <= num && num <= 255) {
-					ret.parts.push(num);
-				} else {
+				const num = parseInt(m[i], 10);
+				if (Number.isNaN(num) || num < 0 || num > 255 || m[i].length > 3) {
 					return null;
 				}
+				ret.parts.push(num);
 			}
 			return ret;
-		} else if ((m = ipStr.match(/^([\p{Hex_Digit}:]+)(?:\/(\d+))?$/u)) && !/:::/.test(ipStr) && (ipStr.match(/::/g) || []).length < 2) {
-			// Potential IPv6
+		}
+
+		// IPv6 pattern
+		m = ipStr.match(/^([\p{Hex_Digit}:]+)(?:\/(\d{1,3}))?$/u);
+		if (m && !/:::/.test(ipStr) && (ipStr.match(/::/g) || []).length < 2) {
 			/** @type {Parsed} */
 			const ret = {
 				parts: [],
-				bitLen: typeof m[2] === 'string' ? parseInt(m[2]) : null
+				bitLen: m[2] !== undefined ? parseInt(m[2], 10) : null
 			};
 			if (ret.bitLen !== null && !(0 <= ret.bitLen && ret.bitLen <= 128)) {
 				return null;
@@ -117,17 +126,15 @@ class IPBase {
 			}
 			for (const el of parts) {
 				const num = el === '' ? 0 : parseInt(el, 16);
-				if (el.length <= 4 && 0 <= num && num <= 0xffff) {
-					ret.parts.push(num);
-				} else {
+				if (Number.isNaN(num) || num < 0 || num > 0xffff || el.length > 4) {
 					return null;
 				}
+				ret.parts.push(num);
 			}
 			return ret;
 		}
 
 		return null;
-
 	}
 
 	/**
@@ -274,7 +281,7 @@ class IPBase {
 	 * @protected
 	 */
 	static parseAndStringify(ipStr, options, conditionPredicate) {
-		let {parts, bitLen} = this.parse(ipStr) || {parts: null, bitLen: null};
+		let {parts, bitLen} = this._parse(ipStr) || {parts: null, bitLen: null};
 		if (
 			parts === null ||
 			conditionPredicate && !conditionPredicate(parts.length === 4 ? 4 : 6, bitLen !== null)
@@ -335,7 +342,7 @@ class IPBase {
 		if (ip instanceof IP) {
 			return ip.getProperties();
 		} else {
-			const {parts, bitLen} = this.parse(ip) || {parts: null, bitLen: null};
+			const {parts, bitLen} = this._parse(ip) || {parts: null, bitLen: null};
 			if (!parts) {
 				return null;
 			}
@@ -469,7 +476,7 @@ class IPUtil extends IPBase {
 	 * @protected
 	 */
 	static validate(ipStr, allowCidr, conditionPredicate, options) {
-		const {parts, bitLen} = this.parse(ipStr) || {parts: null, bitLen: null};
+		const {parts, bitLen} = this._parse(ipStr) || {parts: null, bitLen: null};
 		const isCidr = bitLen !== null;
 		if (
 			// Not a valid IP, or
@@ -736,7 +743,7 @@ class IP extends IPBase {
 	 * @returns {IP?} A new `IP` instance if parsing succeeds, or `null` if the input is invalid.
 	 */
 	static newFromText(ipStr) {
-		const {parts, bitLen} = this.parse(ipStr) || {parts: null, bitLen: null};
+		const {parts, bitLen} = this._parse(ipStr) || {parts: null, bitLen: null};
 		if (!parts) {
 			return null;
 		}
@@ -756,7 +763,7 @@ class IP extends IPBase {
 		if (typeof range !== 'number') {
 			throw new TypeError('The "range" parameter for IP.newFromRange must be a number.');
 		}
-		const {parts, bitLen} = this.parse(ipStr, range) || {parts: null, bitLen: null};
+		const {parts, bitLen} = this._parse(ipStr, range) || {parts: null, bitLen: null};
 		if (!parts || bitLen === null) { // bitLen should never be null, though
 			return null;
 		}

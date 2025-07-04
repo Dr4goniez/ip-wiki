@@ -1,15 +1,18 @@
 /**
- * The return type of `IPBase.parse`.
+ * The result type of `IPBase.parse`.
  */
 export interface Parsed {
-	/**
-	 * The IP address parts as an array of decimal numbers.
-	 */
-	parts: number[];
-	/**
-	 * The bit length, if the parsed address is a CIDR.
-	 */
-	bitLen: number | null;
+    /**
+     * Array of numeric parts:
+     * - 4 elements for IPv4 addresses (each `0–255`)
+     * - 8 elements for IPv6 addresses (each `0–65535`)
+     */
+    parts: number[];
+    /**
+     * CIDR bit length if present, or `null` if unspecified.
+     * - Range: `0–32` for IPv4, `0–128` for IPv6.
+     */
+    bitLen: number | null;
 }
 /**
  * The structure of the internal private properties of an {@link IP} instance.
