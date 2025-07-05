@@ -328,7 +328,7 @@ class IPBase {
 			return null;
 		}
 		const len = range1.first.length;
-		if (![range1.last, range2.first, range2.last].every(({length}) => length === len)) {
+		if (![range1.last, range2.first, range2.last].every(({ length }) => length === len)) {
 			return false;
 		}
 		let broader, narrower;
@@ -360,7 +360,7 @@ class IPBase {
 		if (ip instanceof IP) {
 			return ip.getProperties();
 		} else {
-			const {parts, bitLen} = this._parse(ip) || {parts: null, bitLen: null};
+			const { parts, bitLen } = this._parse(ip) || { parts: null, bitLen: null };
 			if (!parts) {
 				return null;
 			}
@@ -426,7 +426,7 @@ class IPUtil extends IPBase {
 	 * * The parsed IP address does not meet the conditions specified by `conditionPredicate`
 	 */
 	static sanitize(ipStr, capitalize, conditionPredicate) {
-		return this._parseAndStringify(ipStr, {capitalize: !!capitalize}, conditionPredicate);
+		return this._parseAndStringify(ipStr, { capitalize: !!capitalize }, conditionPredicate);
 	}
 
 	/**
@@ -448,7 +448,7 @@ class IPUtil extends IPBase {
 	 * * The parsed IP address does not meet the conditions specified by `conditionPredicate`
 	 */
 	static abbreviate(ipStr, capitalize, conditionPredicate) {
-		return this._parseAndStringify(ipStr, {mode: 'short', capitalize: !!capitalize}, conditionPredicate);
+		return this._parseAndStringify(ipStr, { mode: 'short', capitalize: !!capitalize }, conditionPredicate);
 	}
 
 	/**
@@ -470,7 +470,7 @@ class IPUtil extends IPBase {
 	 * * The parsed IP address does not meet the conditions specified by `conditionPredicate`
 	 */
 	static lengthen(ipStr, capitalize, conditionPredicate) {
-		return this._parseAndStringify(ipStr, {mode: 'long', capitalize: !!capitalize}, conditionPredicate);
+		return this._parseAndStringify(ipStr, { mode: 'long', capitalize: !!capitalize }, conditionPredicate);
 	}
 
 	/**
@@ -494,7 +494,7 @@ class IPUtil extends IPBase {
 	 * @protected
 	 */
 	static validate(ipStr, allowCidr, conditionPredicate, options) {
-		const {parts, bitLen} = this._parse(ipStr) || {parts: null, bitLen: null};
+		const { parts, bitLen } = this._parse(ipStr) || { parts: null, bitLen: null };
 		const isCidr = bitLen !== null;
 		if (
 			// Not a valid IP, or
@@ -508,7 +508,7 @@ class IPUtil extends IPBase {
 		}
 		if (allowCidr === 'strict' && isCidr) {
 			// On strict CIDR validation mode, return a corrected CIDR if the prefix is inaccurate
-			const {first} = this._parseRange(parts, bitLen);
+			const { first } = this._parseRange(parts, bitLen);
 			if (!first.every((num, i) => num === parts[i])) {
 				return this._stringify(first, '/' + bitLen, options);
 			}
@@ -761,7 +761,7 @@ class IP extends IPBase {
 	 * @returns {IP?} A new `IP` instance if parsing succeeds, or `null` if the input is invalid.
 	 */
 	static newFromText(ipStr) {
-		const {parts, bitLen} = this._parse(ipStr) || {parts: null, bitLen: null};
+		const { parts, bitLen } = this._parse(ipStr) || { parts: null, bitLen: null };
 		if (!parts) {
 			return null;
 		}
@@ -781,7 +781,7 @@ class IP extends IPBase {
 		if (typeof range !== 'number') {
 			throw new TypeError('The "range" parameter for IP.newFromRange must be a number.');
 		}
-		const {parts, bitLen} = this._parse(ipStr, range) || {parts: null, bitLen: null};
+		const { parts, bitLen } = this._parse(ipStr, range) || { parts: null, bitLen: null };
 		if (!parts || bitLen === null) { // bitLen should never be null, though
 			return null;
 		}
@@ -898,7 +898,7 @@ class IP extends IPBase {
 	 * @returns A properly formatted string representation of the IP or CIDR.
 	 */
 	abbreviate(capitalize = false) {
-		return this.stringify({capitalize, mode: 'short'});
+		return this.stringify({ capitalize, mode: 'short' });
 	}
 
 	/**
@@ -911,7 +911,7 @@ class IP extends IPBase {
 	 * @returns A properly formatted string representation of the IP or CIDR.
 	 */
 	sanitize(capitalize = false) {
-		return this.stringify({capitalize});
+		return this.stringify({ capitalize });
 	}
 
 	/**
@@ -924,7 +924,7 @@ class IP extends IPBase {
 	 * @returns A properly formatted string representation of the IP or CIDR.
 	 */
 	lengthen(capitalize = false) {
-		return this.stringify({capitalize, mode: 'long'});
+		return this.stringify({ capitalize, mode: 'long' });
 	}
 
 	/**
@@ -992,7 +992,7 @@ class IP extends IPBase {
 	 * @param {false} [getInstance=false] Whether to get the start and end IP addresses as IP instances.
 	 * @param {StringifyOptions} [options] Optional formatting options for the `cidr`, `first`,
 	 * and `last` properties.
-	 * @returns {{bitLen: number; cidr: string; first: string; last: string;}}
+	 * @returns {{ bitLen: number; cidr: string; first: string; last: string; }}
 	 */
 	/**
 	 * Gets range information of the IP instance.
@@ -1000,15 +1000,15 @@ class IP extends IPBase {
 	 * @overload
 	 * @param {true} getInstance Whether to get the start and end IP addresses as IP instances.
 	 * @param {StringifyOptions} [options] Optional formatting options for the `cidr` property.
-	 * @returns {{bitLen: number; cidr: string; first: IP; last: IP;}}
+	 * @returns {{ bitLen: number; cidr: string; first: IP; last: IP; }}
 	 */
 	/**
 	 * @param {boolean} [getInstance]
 	 * @param {StringifyOptions} [options]
-	 * @returns {{bitLen: number; cidr: string; first: string | IP; last: string | IP;}}
+	 * @returns {{ bitLen: number; cidr: string; first: string | IP; last: string | IP; }}
 	 */
 	getRange(getInstance, options = {}) {
-		let {first, last, bitLen, isCidr} = this.getProperties();
+		let { first, last, bitLen, isCidr } = this.getProperties();
 		if (!getInstance) {
 			const firstStr = IP._stringify(first, '', options);
 			return {
@@ -1025,8 +1025,8 @@ class IP extends IPBase {
 			return {
 				bitLen,
 				cidr: IP._stringify(first, '/' + bitLen, options),
-				first: new IP({first, last: first, bitLen: bl, isCidr}),
-				last: new IP({first: last, last, bitLen: bl, isCidr})
+				first: new IP({ first, last: first, bitLen: bl, isCidr }),
+				last: new IP({ first: last, last, bitLen: bl, isCidr })
 			};
 		}
 	}
