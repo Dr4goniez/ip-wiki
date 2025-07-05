@@ -74,6 +74,7 @@ class IPBase {
 	 * @protected
 	 */
 	static _parse(ipStr, bitLen) {
+
 		if (typeof ipStr !== 'string') {
 			return null;
 		}
@@ -204,39 +205,40 @@ class IPBase {
 			bitLen,
 			isCidr: true
 		};
-
 	}
 
 	/**
 	 * Converts an array of decimal IP parts into a string.
 	 *
-	 * @param {number[]} decimals Array of decimal parts.
-	 * @param {string} suffix Suffix to append (e.g., `/24`).
-	 * @param {StringifyOptions} [options]
-	 * @returns {string}
+	 * @param {number[]} decimals Array of decimal IP parts.
+	 * @param {string} suffix String to append after the address (e.g., CIDR `/24` or empty string).
+	 * @param {StringifyOptions} [options] Formatting options.
+	 * @returns {string} Formatted IP address string.
 	 * @protected
 	 */
-	static stringify(decimals, suffix, options = {}) {
-		/** @type {(number | string)[]} */
-		let parts = decimals;
-		const version = parts.length === 4 ? 4 : 6;
+	static _stringify(decimals, suffix, options = {}) {
+
+		const version = decimals.length === 4 ? 4 : 6;
 		const delimiter = version === 4 ? '.' : ':';
-		const {mode, capitalize} = options;
-		if (version === 6) {
-			// IPv6's parts need to be converted from decimal to hex
-			parts = parts.map(el => el.toString(16));
-		}
+		const { mode, capitalize } = options;
+
+		/** @type {(number | string)[]} */
+		let parts = version === 6
+			? decimals.map(el => el.toString(16)) // Convert to hex
+			: decimals;
+
+		// IPv6 Shortening (RFC 5952)
 		if (mode === 'short' && version === 6) {
 
-			// Step 1: Find the longest run of consecutive "0" elements
+			// Find longest zero-run
 			let maxStart = -1, maxLen = 0;
-			for (let i = 0; i < parts.length; ) {
+			for (let i = 0; i < parts.length;) {
 				if (parts[i] !== '0') {
 					i++;
 					continue;
 				}
 				const start = i;
-				while (parts[i] === '0') i++;
+				while (i < parts.length && parts[i] === '0') i++;
 				const len = i - start;
 				if (len > maxLen) {
 					maxStart = start;
@@ -244,14 +246,13 @@ class IPBase {
 				}
 			}
 
-			// Step 2: If found a run of at least two zeros, replace with empty string and insert "::"
+			// Replace the zero-run, if found,  with "::"
 			if (maxLen >= 2) {
 				const compressed = [
-					...parts.slice(0, maxStart),
-					'',
-					...parts.slice(maxStart + maxLen),
+					...parts.slice(0, maxStart),		// Segments before the run
+					'',									// Placeholder for "::"
+					...parts.slice(maxStart + maxLen)	// Segments after the run
 				];
-				// If compression was at the start or end, ensure correct leading/trailing ':'
 				let ret = compressed.join(':');
 				if (ret.startsWith(':')) ret = ':' + ret;
 				if (ret.endsWith(':')) ret += ':';
@@ -263,13 +264,17 @@ class IPBase {
 			// No compression possible
 			const ret = parts.join(':') + suffix;
 			return capitalize ? ret.toUpperCase() : ret;
+		}
 
-		} else if (mode === 'long') {
+		// Long mode zero-padding
+		if (mode === 'long') {
+			const padLen = version === 4 ? 3 : 4;
 			parts = parts.map((el) => {
 				const str = el.toString();
-				return '0'.repeat((version === 4 ? 3 : 4) - str.length) + str;
+				return '0'.repeat(padLen - str.length) + str;
 			});
 		}
+
 		const ret = parts.join(delimiter) + suffix;
 		return capitalize ? ret.toUpperCase() : ret;
 	}
@@ -297,7 +302,7 @@ class IPBase {
 		// If CIDR, correct any inaccurate ones
 		parts = this._parseRange(parts, bitLen).first;
 		const suffix = bitLen !== null ? '/' + bitLen : '';
-		return this.stringify(parts, suffix, options);
+		return this._stringify(parts, suffix, options);
 	}
 
 	/**
@@ -498,7 +503,7 @@ class IPUtil extends IPBase {
 			// On strict CIDR validation mode, return a corrected CIDR if the prefix is inaccurate
 			const {first} = this._parseRange(parts, bitLen);
 			if (!first.every((num, i) => num === parts[i])) {
-				return this.stringify(first, '/' + bitLen, options);
+				return this._stringify(first, '/' + bitLen, options);
 			}
 		}
 		return true;
@@ -864,7 +869,7 @@ class IP extends IPBase {
 	 */
 	stringify(options = {}) {
 		const suffix = this.isCidr ? '/' + this.bitLen : '';
-		return IP.stringify(this.first, suffix, options);
+		return IP._stringify(this.first, suffix, options);
 	}
 
 	/**
@@ -998,12 +1003,12 @@ class IP extends IPBase {
 	getRange(getInstance, options = {}) {
 		let {first, last, bitLen, isCidr} = this.getProperties();
 		if (!getInstance) {
-			const firstStr = IP.stringify(first, '', options);
+			const firstStr = IP._stringify(first, '', options);
 			return {
 				bitLen,
 				cidr: firstStr + '/' + bitLen,
 				first: firstStr,
-				last: IP.stringify(last, '', options)
+				last: IP._stringify(last, '', options)
 			};
 		} else {
 			first = first.slice();
@@ -1012,7 +1017,7 @@ class IP extends IPBase {
 			isCidr = false;
 			return {
 				bitLen,
-				cidr: IP.stringify(first, '/' + bitLen, options),
+				cidr: IP._stringify(first, '/' + bitLen, options),
 				first: new IP({first, last: first, bitLen: bl, isCidr}),
 				last: new IP({first: last, last, bitLen: bl, isCidr})
 			};

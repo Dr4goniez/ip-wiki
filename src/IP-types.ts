@@ -44,26 +44,26 @@ export interface RangeObject {
 }
 
 /**
- * Options for formatting IP addresses in the output.
+ * Options for formatting IP address output.
  */
 export interface StringifyOptions {
 	/**
-	 * `undefined`: Returns the IP address in its "sanitized" form. For example:
-	 * - `192.168.0.1` (for IPv4 addresses, same as `mode: 'short'`)
-	 * - `fd12:3456:789a:1:0:0:0:0`
+	 * Address formatting style:
 	 *
-	 * `'short'`: Returns the IP address in its shortest notation. For example:
-	 * - `192.168.0.1` (IPv4, same as `mode: undefined`)
-	 * - `fd12:3456:789a:1::`
+	 * - `undefined` (default):
+	 *   - IPv4 returns sanitized form (e.g., `192.168.0.1`)
+	 *   - IPv6 returns condensed form without aggressive shortening (e.g., `fd12:3456:789a:1:0:0:0:0`)
 	 *
-	 * `'long'`: Returns the IP address in its longest notation, with each segment
-	 * padded with leading zeros. For example:
-	 * - `192.168.000.001`
-	 * - `fd12:3456:789a:0001:0000:0000:0000:0000`
+	 * - `'short'`: Aggressive shortening for IPv6 using `::` per RFC 5952.
+	 *   - IPv4 unchanged from default.
+	 *
+	 * - `'long'`: Full zero-padded form.
+	 *   - IPv4: `192.168.000.001`
+	 *   - IPv6: `fd12:3456:789a:0001:0000:0000:0000:0000`
 	 */
 	mode?: "short" | "long";
 	/**
-	 * Whether to capitalize the output IP address.
+	 * Whether to convert output to uppercase (applies to IPv6 hex segments).
 	 */
 	capitalize?: boolean;
 }
