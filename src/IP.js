@@ -495,7 +495,7 @@ class IPUtil extends IPBase {
 	 * @returns {boolean | string} See above.
 	 * @protected
 	 */
-	static validate(ipStr, allowCidr, conditionPredicate, options) {
+	static _validate(ipStr, allowCidr, conditionPredicate, options) {
 		const { parts, bitLen } = this._parse(ipStr) || { parts: null, bitLen: null };
 		const isCidr = bitLen !== null;
 		if (
@@ -527,7 +527,7 @@ class IPUtil extends IPBase {
 	 * @returns {boolean | string} Returns `true` if valid, `false` if invalid, or a normalized CIDR string.
 	 */
 	static isIP(ipStr, allowCidr = false, options = {}) {
-		return this.validate(ipStr, allowCidr, void 0, options);
+		return this._validate(ipStr, allowCidr, void 0, options);
 	}
 
 	/**
@@ -539,7 +539,7 @@ class IPUtil extends IPBase {
 	 * @returns {boolean | string} Returns `true` if valid, `false` if invalid, or a normalized CIDR string.
 	 */
 	static isIPv4(ipStr, allowCidr = false, options = {}) {
-		return this.validate(ipStr, allowCidr, (v) => v === 4, options);
+		return this._validate(ipStr, allowCidr, (v) => v === 4, options);
 	}
 
 	/**
@@ -551,7 +551,7 @@ class IPUtil extends IPBase {
 	 * @returns {boolean | string} Returns `true` if valid, `false` if invalid, or a normalized CIDR string.
 	 */
 	static isIPv6(ipStr, allowCidr = false, options = {}) {
-		return this.validate(ipStr, allowCidr, (v) => v === 6, options);
+		return this._validate(ipStr, allowCidr, (v) => v === 6, options);
 	}
 
 	/**
@@ -564,7 +564,7 @@ class IPUtil extends IPBase {
 	 */
 	static isCIDR(ipStr, mode, options) {
 		const allowCidr = mode === 'strict' ? mode : true;
-		return this.validate(ipStr, allowCidr, (_, isCidr) => isCidr, options);
+		return this._validate(ipStr, allowCidr, (_, isCidr) => isCidr, options);
 	}
 
 	/**
@@ -577,7 +577,7 @@ class IPUtil extends IPBase {
 	 */
 	static isIPv4CIDR(ipStr, mode, options) {
 		const allowCidr = mode === 'strict' ? mode : true;
-		return this.validate(ipStr, allowCidr, (v, isCidr) => v === 4 && isCidr, options);
+		return this._validate(ipStr, allowCidr, (v, isCidr) => v === 4 && isCidr, options);
 	}
 
 	/**
@@ -590,7 +590,7 @@ class IPUtil extends IPBase {
 	 */
 	static isIPv6CIDR(ipStr, mode, options) {
 		const allowCidr = mode === 'strict' ? mode : true;
-		return this.validate(ipStr, allowCidr, (v, isCidr) => v === 6 && isCidr, options);
+		return this._validate(ipStr, allowCidr, (v, isCidr) => v === 6 && isCidr, options);
 	}
 
 	/**
