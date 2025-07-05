@@ -118,8 +118,10 @@ class IPBase {
 			}
 			ipStr = m[1];
 			let parts = ipStr.split(':');
-			if (parts.length < 7) {
-				ipStr = ipStr.replace('::', ':'.repeat(10 - parts.length));
+			if (ipStr.includes('::')) {
+				const missing = 8 - (parts.length - 1);  // Subtract 1 for empty slot from '::'
+				const replacement = new Array(missing + 1).join('0:').slice(0, -1);
+				ipStr = ipStr.replace('::', replacement ? `:${replacement}:` : ':');
 				parts = ipStr.split(':');
 			}
 			if (parts.length !== 8) {
