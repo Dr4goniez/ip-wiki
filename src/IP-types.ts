@@ -97,12 +97,12 @@ export interface StringifyOptions {
  * ```
  */
 export type StrictCIDR = "strict";
+
 /**
- * The type of an optional callback function used to filter out IP addresses that do not meet
- * specific conditions.
+ * Optional callback to filter IP addresses by version or CIDR status.
  *
- * @param version The IP version: `4` or `6`. By default, both are accepted.
- * @param isCidr Indicates whether the address is a CIDR. By default, both CIDRs and non-CIDRs are accepted.
- * @returns Whether the IP address satisfies the specified condition(s).
+ * @param version IP version (`4` for IPv4, `6` for IPv6).
+ * @param isCidr Whether the address includes a CIDR suffix.
+ * @returns `true` to accept the address, `false` to reject.
  */
 export type ConditionPredicate = (version: 4 | 6, isCidr: boolean) => boolean;

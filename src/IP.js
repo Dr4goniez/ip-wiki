@@ -282,27 +282,34 @@ class IPBase {
 	/**
 	 * Parses and stringifies an IP string with optional filtering.
 	 *
-	 * @param {string} ipStr IP or CIDR string to parse.
-	 * @param {StringifyOptions} options Options for formatting.
-	 * @param {ConditionPredicate} [conditionPredicate]
-	 * A predicate to filter addresses by version and CIDR.
-	 * @returns {string?} `null` if:
-	 * * The input string does not represent an IP address.
-	 * * The parsed IP address does not meet the conditions specified by `conditionPredicate`
+	 * @param {string} ipStr IP address or CIDR string to parse.
+	 * @param {StringifyOptions} options Formatting options for output.
+	 * @param {ConditionPredicate} [conditionPredicate] Optional callback to filter addresses.
+	 * @returns {string?} Formatted IP string, or `null` if:
+	 * - The input is invalid.
+	 * - The address fails the `conditionPredicate`.
 	 * @protected
 	 */
-	static parseAndStringify(ipStr, options, conditionPredicate) {
-		let {parts, bitLen} = this._parse(ipStr) || {parts: null, bitLen: null};
-		if (
-			parts === null ||
-			conditionPredicate && !conditionPredicate(parts.length === 4 ? 4 : 6, bitLen !== null)
-		) {
+	static _parseAndStringify(ipStr, options, conditionPredicate) {
+		const parsed = this._parse(ipStr);
+		if (!parsed) {
 			return null;
 		}
-		// If CIDR, correct any inaccurate ones
-		parts = this._parseRange(parts, bitLen).first;
-		const suffix = bitLen !== null ? '/' + bitLen : '';
-		return this._stringify(parts, suffix, options);
+
+		const { parts, bitLen } = parsed;
+		const version = parts.length === 4 ? 4 : 6;
+		const isCidr = bitLen !== null;
+
+		// Apply filter predicate if provided
+		if (conditionPredicate && !conditionPredicate(version, isCidr)) {
+			return null;
+		}
+
+		// Normalize IP parts to first address if CIDR provided
+		const normalized = this._parseRange(parts, bitLen);
+		const suffix = isCidr ? '/' + bitLen : '';
+
+		return this._stringify(normalized.first, suffix, options);
 	}
 
 	/**
@@ -419,7 +426,7 @@ class IPUtil extends IPBase {
 	 * * The parsed IP address does not meet the conditions specified by `conditionPredicate`
 	 */
 	static sanitize(ipStr, capitalize, conditionPredicate) {
-		return this.parseAndStringify(ipStr, {capitalize: !!capitalize}, conditionPredicate);
+		return this._parseAndStringify(ipStr, {capitalize: !!capitalize}, conditionPredicate);
 	}
 
 	/**
@@ -441,7 +448,7 @@ class IPUtil extends IPBase {
 	 * * The parsed IP address does not meet the conditions specified by `conditionPredicate`
 	 */
 	static abbreviate(ipStr, capitalize, conditionPredicate) {
-		return this.parseAndStringify(ipStr, {mode: 'short', capitalize: !!capitalize}, conditionPredicate);
+		return this._parseAndStringify(ipStr, {mode: 'short', capitalize: !!capitalize}, conditionPredicate);
 	}
 
 	/**
@@ -463,7 +470,7 @@ class IPUtil extends IPBase {
 	 * * The parsed IP address does not meet the conditions specified by `conditionPredicate`
 	 */
 	static lengthen(ipStr, capitalize, conditionPredicate) {
-		return this.parseAndStringify(ipStr, {mode: 'long', capitalize: !!capitalize}, conditionPredicate);
+		return this._parseAndStringify(ipStr, {mode: 'long', capitalize: !!capitalize}, conditionPredicate);
 	}
 
 	/**
