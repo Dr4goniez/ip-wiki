@@ -106,3 +106,30 @@ export type StrictCIDR = "strict";
  * @returns `true` to accept the address, `false` to reject.
  */
 export type ConditionPredicate = (version: 4 | 6, isCidr: boolean) => boolean;
+
+/**
+ * Options for specifying allowed CIDR prefix lengths in {@link IPUtil.intersect}
+ * and {@link IP.intersect}.
+ */
+export interface IntersectOptions {
+	/**
+	 * Smallest allowed prefix length for IPv4. (default: 0 = /0)
+	 */
+	minV4?: number;
+	/**
+	 * Largest allowed prefix length for IPv4. (default: 32 = /32)
+	 */
+	maxV4?: number;
+	/**
+	 * Smallest allowed prefix length for IPv6. (default: 0 = /0)
+	 */
+	minV6?: number;
+	/**
+	 * Largest allowed prefix length for IPv6. (default: 128 = /128)
+	 */
+	maxV6?: number;
+	/**
+	 * Whether to log validation or version mismatch errors. (default: `false`)
+	 */
+	verbose?: boolean;
+}

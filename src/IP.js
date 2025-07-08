@@ -5,6 +5,30 @@
  */
 //<nowiki>
 /**
+ * Returns a human-readable type name for the given value.
+ *
+ * Differentiates between `null`, arrays, and objects with constructors.
+ * For most values, this function returns results similar to `typeof`,
+ * but improves clarity for:
+ * - `null` → `"null"` instead of `"object"`
+ * - arrays → `"array"` instead of `"object"`
+ * - class instances → class name (e.g. `"Date"`, `"Map"`)
+ *
+ * @param {unknown} value - The value whose type is to be formatted.
+ * @returns {string} A string representing the value's type.
+ */
+function formatType(value) {
+	if (Array.isArray(value)) {
+		return 'array';
+	} else if (value === null) {
+		return 'null';
+	} else if (value && value.constructor && value.constructor.name) {
+		return value.constructor.name;
+	} else {
+		return typeof value;
+	}
+}
+/**
  * Abstract class with protected static utilities for IP handling.
  * Designed to be subclassed by static utility classes or instantiable IP objects.
  *
@@ -393,6 +417,152 @@ class IPBase {
 		return ip1.first.every((part, i) => part === ip2.first[i]);
 	}
 
+	/**
+	 * Computes the narrowest CIDR range that fully encompasses two IP ranges,
+	 * while enforcing optional prefix length constraints.
+	 *
+	 * Supports both IPv4 and IPv6, as long as both input ranges are of the same version.
+	 * The input ranges must be pre-parsed {@link RangeObject} objects (with `.first` and `.last` arrays).
+	 *
+	 * **Behavior:**
+	 * - Returns the smallest CIDR block that includes both input ranges.
+	 * - If the IP versions differ (e.g. one is IPv4 and the other is IPv6), returns `null`.
+	 * - If the computed prefix length falls outside the allowed bounds, returns `null`.
+	 * - If `verbose` is `true`, logs warnings for invalid inputs, version mismatches,
+	 *   and out-of-bound results to the console.
+	 *
+	 * **Options:**
+	 *
+	 * The `options` object can include the following optional prefix constraints and flags:
+	 * - `minV4`: Minimum allowed prefix length for IPv4 (default: `0`, i.e. `/0`)
+	 * - `maxV4`: Maximum allowed prefix length for IPv4 (default: `32`, i.e. `/32`)
+	 * - `minV6`: Minimum allowed prefix length for IPv6 (default: `0`, i.e. `/0`)
+	 * - `maxV6`: Maximum allowed prefix length for IPv6 (default: `128`, i.e. `/128`)
+	 * - `verbose`: If `true`, warnings are logged to the console instead of silently returning `null`
+	 *
+	 * **Errors:**
+	 * Throws when:
+	 * - Any of the prefix constraint values are not numbers.
+	 * - Any of the values are out of bounds (e.g. `minV4 > maxV4`, or `maxV6 > 128`).
+	 *
+	 * @param {RangeObject} range1 - First IP range (must have `.first` and `.last` arrays).
+	 * @param {RangeObject} range2 - Second IP range (same version as `range1`).
+	 * @param {IntersectOptions} [options] - Optional prefix length bounds and debug flag.
+	 * @returns {RangeObject | null} A CIDR-aligned `RangeObject` covering both inputs,
+	 * or `null` if the IP versions differ or the result violates constraints.
+	 * @throws {TypeError} If any option is not a number.
+	 * @throws {RangeError} If any option is out of bounds or if `min > max`.
+	 * @protected
+	 */
+	static _getCommonRange(range1, range2, options = {}) {
+		const {
+			minV4 = 0,
+			maxV4 = 32,
+			minV6 = 0,
+			maxV6 = 128,
+			verbose = false
+		} = options;
+
+		if (range1.first.length !== range2.first.length) {
+			if (verbose) {
+				console.warn(`IP version mismatch: range1 and range2 must be of the same version.`);
+			}
+			return null;
+		}
+
+		if (typeof minV4 !== 'number') {
+			throw new TypeError(`Expected number for "minV4", but got ${formatType(minV4)}.`);
+		}
+		if (typeof maxV4 !== 'number') {
+			throw new TypeError(`Expected number for "maxV4", but got ${formatType(maxV4)}.`);
+		}
+		if (typeof minV6 !== 'number') {
+			throw new TypeError(`Expected number for "minV6", but got ${formatType(minV6)}.`);
+		}
+		if (typeof maxV6 !== 'number') {
+			throw new TypeError(`Expected number for "maxV6", but got ${formatType(maxV6)}.`);
+		}
+		if (!Number.isInteger(minV4) || minV4 < 0 || minV4 > 32) {
+			throw new RangeError(`"minV4" must be an integer between 0 and 32, but got ${minV4}.`);
+		}
+		if (!Number.isInteger(maxV4) || maxV4 < 0 || maxV4 > 32) {
+			throw new RangeError(`"maxV4" must be an integer between 0 and 32, but got ${maxV4}.`);
+		}
+		if (!Number.isInteger(minV6) || minV6 < 0 || minV6 > 128) {
+			throw new RangeError(`"minV6" must be an integer between 0 and 128, but got ${minV6}.`);
+		}
+		if (!Number.isInteger(maxV6) || maxV6 < 0 || maxV6 > 128) {
+			throw new RangeError(`"maxV6" must be an integer between 0 and 128, but got ${maxV6}.`);
+		}
+		if (minV4 > maxV4) {
+			throw new RangeError(`"minV4" (${minV4}) cannot be greater than "maxV4" (${maxV4}).`);
+		}
+		if (minV6 > maxV6) {
+			throw new RangeError(`"minV6" (${minV6}) cannot be greater than "maxV6" (${maxV6}).`);
+		}
+
+		const len = range1.first.length;
+		const isV4 = len === 4;
+		const minAllowed = isV4 ? minV4 : minV6;
+		const maxAllowed = isV4 ? maxV4 : maxV6;
+
+		// Compute the lowest and highest address across both ranges
+		const /** @type {number[]} */ first = [];
+		const /** @type {number[]} */ last = [];
+		for (let i = 0; i < len; i++) {
+			first[i] = Math.min(range1.first[i], range2.first[i]);
+			last[i] = Math.max(range1.last[i], range2.last[i]);
+		}
+
+		// Calculate the common prefix length between `first` and `last`
+		let commonPrefixLen = 0;
+
+		/**
+		 * Logs a warning and returns `null` if the computed prefix length is outside the allowed range.
+		 *
+		 * @returns {null}
+		 */
+		const errOutsideAllowedRange = () => {
+			if (verbose) {
+				console.warn(`Computed prefix length ${commonPrefixLen} is outside allowed range (${minAllowed}–${maxAllowed}).`);
+			}
+			return null;
+		};
+		/**
+		 * Returns the prefix length unless it represents the full length of the address space (i.e. /32 or /128),
+		 * in which case `null` is returned. This is used to omit redundant prefix notation for single-IP ranges.
+		 *
+		 * @returns {number?}
+		 */
+		const getBitLength = () => {
+			return (isV4 && commonPrefixLen !== 32) || (!isV4 && commonPrefixLen !== 128)
+				? commonPrefixLen
+				: null;
+		};
+
+		for (let i = 0; i < len; i++) {
+			const bits = isV4 ? 8 : 16;
+			for (let b = bits - 1; b >= 0; b--) {
+				const mask = 1 << b;
+				// Check whether this bit differs between first and last
+				if ((first[i] & mask) !== (last[i] & mask)) {
+					// Bit mismatch → reached the point of divergence
+					if (commonPrefixLen < minAllowed || commonPrefixLen > maxAllowed) {
+						return errOutsideAllowedRange();
+					}
+					return this._parseRange(first, getBitLength());
+				}
+				commonPrefixLen++;
+			}
+		}
+
+		// No divergence: both inputs are fully contained within the same CIDR block
+		if (commonPrefixLen < minAllowed || commonPrefixLen > maxAllowed) {
+			return errOutsideAllowedRange();
+		}
+		return this._parseRange(first, getBitLength());
+	}
+
 }
 /**
  * A utility class that provides static methods for validating and formatting IP and CIDR strings.
@@ -744,6 +914,41 @@ class IPUtil extends IPBase {
 		return ipArr.every((ip2) => !!this._checkEquality(ip1, ip2));
 	}
 
+	/**
+	 * Returns the narrowest CIDR range that encompasses two IP addresses or subnets,
+	 * provided they are of the same version (both IPv4 or both IPv6).
+	 *
+	 * @param {string | IP} ip1 First IP address or CIDR to intersect.
+	 * @param {string | IP} ip2 Second IP address or CIDR to intersect.
+	 * @param {IntersectOptions} [options] Optional prefix length constraints and verbosity flag.
+	 * @returns {IP?} An {@link IP} instance representing the narrowest common range, or `null` if:
+	 * - Either `ip1` or `ip2` is invalid.
+	 * - The IP versions differ (e.g., one is IPv4 and the other is IPv6).
+	 */
+	static intersect(ip1, ip2, options = {}) {
+
+		const { verbose = false } = options;
+
+		const range1 = this._getRangeObject(ip1);
+		const range2 = this._getRangeObject(ip2);
+		if (!range1 || !range2) {
+			const invalidInputs = [];
+			if (!range1) {
+				invalidInputs.push(ip1);
+			}
+			if (!range2) {
+				invalidInputs.push(ip2);
+			}
+			if (verbose) {
+				console.warn(`Invalid inputs: ${invalidInputs.join(', ')}.`);
+			}
+			return null;
+		}
+
+		const result = this._getCommonRange(range1, range2);
+		return result && new IP(result);
+	}
+
 }
 /**
  * The IP class. Unlike the static {@link IPUtil} class, this class provides several instance methods
@@ -796,7 +1001,7 @@ class IP extends IPBase {
 	 * Private constructor. Use {@link IP.newFromText} or {@link IP.newFromRange} to create a new instance.
 	 *
 	 * @param {RangeObject} range An object containing internal CIDR information.
-	 * @protected
+	 * @hidden
 	 */
 	constructor(range) {
 		super(true);
@@ -1145,6 +1350,33 @@ class IP extends IPBase {
 		return ipArr.every((ip) => !!IP._checkEquality(props, ip));
 	}
 
+	/**
+	 * Returns the narrowest CIDR range that encompasses this IP and another IP address or subnet,
+	 * provided they are of the same version (both IPv4 or both IPv6).
+	 *
+	 * @param {string | IP} ip IP address or CIDR string to intersect with this instance.
+	 * @param {IntersectOptions} [options] Optional prefix length constraints and verbosity flag.
+	 * @returns {IP?} A new {@link IP} instance representing the narrowest common CIDR range, or `null` if:
+	 * - The input `ip` is invalid.
+	 * - The IP versions differ.
+	 */
+	intersect(ip, options = {}) {
+
+		const { verbose = false } = options;
+
+		const range1 = this.getProperties();
+		const range2 = IP._getRangeObject(ip);
+		if (!range2) {
+			if (verbose) {
+				console.warn(`Invalid input: ${ip}.`);
+			}
+			return null;
+		}
+
+		const result = IP._getCommonRange(range1, range2);
+		return result && new IP(result);
+	}
+
 }
 /**
  * @typedef {import('./IP-types.ts').Parsed} Parsed
@@ -1152,6 +1384,7 @@ class IP extends IPBase {
  * @typedef {import('./IP-types.ts').StringifyOptions} StringifyOptions
  * @typedef {import('./IP-types.ts').StrictCIDR} StrictCIDR
  * @typedef {import('./IP-types.ts').ConditionPredicate} ConditionPredicate
+ * @typedef {import('./IP-types.ts').IntersectOptions} IntersectOptions
  */
 module.exports = {
 	IPUtil,
