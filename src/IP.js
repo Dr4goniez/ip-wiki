@@ -168,66 +168,54 @@ class IPBase {
 	 * Returns the first and last IPs in the given CIDR range.
 	 *
 	 * Accepts both IPv4 and IPv6 addresses, represented as arrays of decimal parts.
-	 * If no `bitLen` is provided, the address is treated as a single host.
+	 * If no `bitLen` is provided, the address is treated as a single host (non-CIDR).
 	 *
-	 * @param {number[]} parts Array of decimal IP parts:
+	 * @param {number[]} parts - Array of decimal IP parts:
 	 * - 4 elements for IPv4 (each `0–255`)
 	 * - 8 elements for IPv6 (each `0–65535`)
-	 * @param {number?} bitLen Optional CIDR bit length (`0–32` for IPv4, `0–128` for IPv6).
-	 * @returns {RangeObject} Object with first and last IPs in range.
+	 * @param {number?} bitLen - Optional CIDR bit length (`0–32` for IPv4, `0–128` for IPv6).
+	 * @returns {RangeObject} Object with the first and last IPs in the range.
 	 * @throws {Error} If `parts` is not a valid IPv4 or IPv6 array.
 	 * @protected
 	 */
 	static _parseRange(parts, bitLen) {
-
 		if (parts.length !== 4 && parts.length !== 8) {
 			throw new Error(`Unexpected error: The IP has ${parts.length} parts.`);
 		}
+
+		// If no CIDR bit length is specified, treat this as a single-address range.
+		const isV4 = parts.length === 4;
 		if (typeof bitLen !== 'number') {
 			return {
 				first: parts,
 				last: parts,
-				bitLen: parts.length === 4 ? 32 : 128,
+				bitLen: isV4 ? 32 : 128,
 				isCidr: false
 			};
 		}
 
-		// Get the netmask
-		const netMaskParts =
-			(
-				// Convert the bit length to a 32- or 128-bit binary-representing string.
-				// e.g. if the input is IPv4 and bitLen is 24, this will be `11111111 11111111 11111111 00000000`.
-				// The max bit length is the square of the number of IP parts multiplied by 2:
-				// 4^2*2=32 or 8^2*2=128 (where "^" here is an exponent operator, not the JS bitwise XOR)
-				// If JS allowed 52-bit+ numbers, we would be able to use something like `~(1 << bitLen) >>> 0`
-				// instead, but the result will cause an overflow in the case of IPv6.
-				('1'.repeat(bitLen) + '0'.repeat(Math.pow(parts.length, 2) * 2 - bitLen))
-				// Split the string to an array of 8- or 16-bit binary-representing strings
-				.match(new RegExp(`.{${parts.length * 2}}`, 'g')) || []
-			)
-			// Map the binary-representing strings to decimals, e.g. [255, 255, 255, 0]
-			.map(/** @param {string} bin */ (bin) => parseInt(bin, 2));
-
-		// Get the first address
-		const first = parts.map((el, i) => {
-			// The first address of the netmask calculated above is the bitwise AND of the IP parts and the netmask parts
-			// e.g. if the input IP string is `192.168.0.1`:
-			// 192 & 255 = 192, 168 & 255 = 168, 0 & 255 = 0, 1 & 0 = 0
-			return el & netMaskParts[i];
+		// Construct the netmask for this CIDR. For example, IPv4 /20 → [255, 255, 240, 0]
+		const partBits = isV4 ? 8 : 16;
+		const partMax = isV4 ? 0xff : 0xffff;
+		const netMaskParts = parts.map((_, i) => {
+			const bitsRemaining = bitLen - i * partBits;
+			if (bitsRemaining >= partBits) {
+				// This segment is fully covered by the mask (all 1s)
+				return partMax;
+			}
+			if (bitsRemaining > 0) {
+				// This segment is partially covered (some 1s followed by 0s)
+				return (partMax << (partBits - bitsRemaining)) & partMax;
+			}
+			// This segment is outside the mask (all 0s)
+			return 0;
 		});
 
-		// Get the last address
-		const high = parts.length === 4 ? 255 : 0xffff;
-		const invNetMaskParts = netMaskParts.map((el) => el ^ high); // Inverted netmask, e.g. [0, 0, 0, 255]
-		// The last address of the netmask calculated above is the bitwise OR of the first IP's parts and the inverted netmask parts
-		// 192 | 0 = 192, 168 | 0 = 168, 0 | 0 = 0, 1 | 255 = 255
-		const last = first.map((el, i) => el | invNetMaskParts[i]);
-
-		// Return the result as an object of arrays of decimals
-		// CAUTION: The IP parts are in decimals (must be converted to hex for IPv6)
 		return {
-			first,
-			last,
+			// Network address: IP AND netmask
+			first: parts.map((val, i) => val & netMaskParts[i]),
+			// Broadcast address: IP OR inverted netmask
+			last: parts.map((val, i) => val | (~netMaskParts[i] & partMax)),
 			bitLen,
 			isCidr: true
 		};
