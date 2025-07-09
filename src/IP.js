@@ -532,6 +532,7 @@ class IPBase {
 	 * @param {IntersectOptions} options The options to validate.
 	 * @returns {Required<IntersectOptions>} The validated options.
 	 * @throws If `options` includes invalid entries.
+	 * @protected
 	 */
 	static _validateIntersectOptions(options) {
 		const {
