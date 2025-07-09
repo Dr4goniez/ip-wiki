@@ -444,53 +444,28 @@ class IPBase {
 	 */
 	static _getCommonRange(range1, range2, options = {}) {
 		const {
-			minV4 = 0,
-			maxV4 = 32,
-			minV6 = 0,
-			maxV6 = 128,
-			verbose = false
-		} = options;
+			minV4,
+			maxV4,
+			minV6,
+			maxV6,
+			verbose
+		} = this._validateIntersectOptions(options);
 
+		// Check for IP version mismatch
 		if (range1.first.length !== range2.first.length) {
 			if (verbose) {
-				console.warn(`IP version mismatch: range1 and range2 must be of the same version.`);
+				const ips = [range1, range2].map((r) => {
+					const suffix = r.isCidr ? `/${r.bitLen}` : '';
+					return this._stringify(r.first, suffix, { mode: 'short' });
+				});
+				console.warn(`"range1" and "range2" must be of the same version: ${ips.join(', ')}`);
 			}
 			return null;
 		}
 
-		if (typeof minV4 !== 'number') {
-			throw new TypeError(`Expected number for "minV4", but got ${formatType(minV4)}.`);
-		}
-		if (typeof maxV4 !== 'number') {
-			throw new TypeError(`Expected number for "maxV4", but got ${formatType(maxV4)}.`);
-		}
-		if (typeof minV6 !== 'number') {
-			throw new TypeError(`Expected number for "minV6", but got ${formatType(minV6)}.`);
-		}
-		if (typeof maxV6 !== 'number') {
-			throw new TypeError(`Expected number for "maxV6", but got ${formatType(maxV6)}.`);
-		}
-		if (!Number.isInteger(minV4) || minV4 < 0 || minV4 > 32) {
-			throw new RangeError(`"minV4" must be an integer between 0 and 32, but got ${minV4}.`);
-		}
-		if (!Number.isInteger(maxV4) || maxV4 < 0 || maxV4 > 32) {
-			throw new RangeError(`"maxV4" must be an integer between 0 and 32, but got ${maxV4}.`);
-		}
-		if (!Number.isInteger(minV6) || minV6 < 0 || minV6 > 128) {
-			throw new RangeError(`"minV6" must be an integer between 0 and 128, but got ${minV6}.`);
-		}
-		if (!Number.isInteger(maxV6) || maxV6 < 0 || maxV6 > 128) {
-			throw new RangeError(`"maxV6" must be an integer between 0 and 128, but got ${maxV6}.`);
-		}
-		if (minV4 > maxV4) {
-			throw new RangeError(`"minV4" (${minV4}) cannot be greater than "maxV4" (${maxV4}).`);
-		}
-		if (minV6 > maxV6) {
-			throw new RangeError(`"minV6" (${minV6}) cannot be greater than "maxV6" (${maxV6}).`);
-		}
-
 		const len = range1.first.length;
 		const isV4 = len === 4;
+		const partBits = isV4 ? 8 : 16;
 		const minAllowed = isV4 ? minV4 : minV6;
 		const maxAllowed = isV4 ? maxV4 : maxV6;
 
@@ -502,39 +477,15 @@ class IPBase {
 			last[i] = Math.max(range1.last[i], range2.last[i]);
 		}
 
-		// Calculate the common prefix length between `first` and `last`
+		// Calculate the common prefix length
 		let commonPrefixLen = 0;
 
-		/**
-		 * Logs a warning and returns `null` if the computed prefix length is outside the allowed range.
-		 *
-		 * @returns {null}
-		 */
-		const errOutsideAllowedRange = () => {
-			if (verbose) {
-				console.warn(`Computed prefix length ${commonPrefixLen} is outside allowed range (${minAllowed}–${maxAllowed}).`);
-			}
-			return null;
-		};
-		/**
-		 * Returns the prefix length unless it represents the full length of the address space (i.e. /32 or /128),
-		 * in which case `null` is returned. This is used to omit redundant prefix notation for single-IP ranges.
-		 *
-		 * @returns {number?}
-		 */
-		const getBitLength = () => {
-			return (isV4 && commonPrefixLen !== 32) || (!isV4 && commonPrefixLen !== 128)
-				? commonPrefixLen
-				: null;
-		};
-
 		for (let i = 0; i < len; i++) {
-			const bits = isV4 ? 8 : 16;
-			for (let b = bits - 1; b >= 0; b--) {
+			// Per-bit comparison in each IP part
+			for (let b = partBits - 1; b >= 0; b--) {
 				const mask = 1 << b;
-				// Check whether this bit differs between first and last
 				if ((first[i] & mask) !== (last[i] & mask)) {
-					// Bit mismatch → reached the point of divergence
+					// Divergence found here
 					if (commonPrefixLen < minAllowed || commonPrefixLen > maxAllowed) {
 						return errOutsideAllowedRange();
 					}
@@ -549,6 +500,88 @@ class IPBase {
 			return errOutsideAllowedRange();
 		}
 		return this._parseRange(first, getBitLength());
+
+		/**
+		 * Logs a warning and returns `null` if the computed prefix length is outside the allowed range.
+		 *
+		 * @returns {null}
+		 */
+		function errOutsideAllowedRange() {
+			if (verbose) {
+				console.warn(`Computed prefix length ${commonPrefixLen} is outside allowed range (${minAllowed}–${maxAllowed}).`);
+			}
+			return null;
+		}
+
+		/**
+		 * Returns the prefix length unless it represents the full length of the address space (i.e. /32 or /128),
+		 * in which case `null` is returned. This is used to omit redundant prefix notation for single-IP ranges.
+		 *
+		 * @returns {number?}
+		 */
+		function getBitLength() {
+			return (isV4 && commonPrefixLen !== 32) || (!isV4 && commonPrefixLen !== 128)
+				? commonPrefixLen
+				: null;
+		}
+	}
+
+	/**
+	 * Validates options for {@link _getCommonRange}.
+	 *
+	 * @param {IntersectOptions} options The options to validate.
+	 * @returns {Required<IntersectOptions>} The validated options.
+	 * @throws If `options` includes invalid entries.
+	 */
+	static _validateIntersectOptions(options) {
+		const {
+			minV4 = 0,
+			maxV4 = 32,
+			minV6 = 0,
+			maxV6 = 128,
+			verbose = false
+		} = options;
+
+		if (typeof minV4 !== 'number') {
+			throw new TypeError(`Expected number for "minV4", but got ${formatType(minV4)}.`);
+		}
+		if (typeof maxV4 !== 'number') {
+			throw new TypeError(`Expected number for "maxV4", but got ${formatType(maxV4)}.`);
+		}
+		if (typeof minV6 !== 'number') {
+			throw new TypeError(`Expected number for "minV6", but got ${formatType(minV6)}.`);
+		}
+		if (typeof maxV6 !== 'number') {
+			throw new TypeError(`Expected number for "maxV6", but got ${formatType(maxV6)}.`);
+		}
+
+		if (!Number.isInteger(minV4) || minV4 < 0 || minV4 > 32) {
+			throw new RangeError(`"minV4" must be an integer between 0 and 32, but got ${minV4}.`);
+		}
+		if (!Number.isInteger(maxV4) || maxV4 < 0 || maxV4 > 32) {
+			throw new RangeError(`"maxV4" must be an integer between 0 and 32, but got ${maxV4}.`);
+		}
+		if (!Number.isInteger(minV6) || minV6 < 0 || minV6 > 128) {
+			throw new RangeError(`"minV6" must be an integer between 0 and 128, but got ${minV6}.`);
+		}
+		if (!Number.isInteger(maxV6) || maxV6 < 0 || maxV6 > 128) {
+			throw new RangeError(`"maxV6" must be an integer between 0 and 128, but got ${maxV6}.`);
+		}
+
+		if (minV4 > maxV4) {
+			throw new RangeError(`"minV4" (${minV4}) cannot be greater than "maxV4" (${maxV4}).`);
+		}
+		if (minV6 > maxV6) {
+			throw new RangeError(`"minV6" (${minV6}) cannot be greater than "maxV6" (${maxV6}).`);
+		}
+
+		return {
+			minV4,
+			maxV4,
+			minV6,
+			maxV6,
+			verbose
+		};
 	}
 
 }
