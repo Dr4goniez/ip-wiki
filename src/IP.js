@@ -933,7 +933,7 @@ class IPUtil extends IPBase {
 			return null;
 		}
 
-		const result = this._getCommonRange(range1, range2);
+		const result = this._getCommonRange(range1, range2, options);
 		return result && new IP(result);
 	}
 
@@ -1361,7 +1361,7 @@ class IP extends IPBase {
 			return null;
 		}
 
-		const result = IP._getCommonRange(range1, range2);
+		const result = IP._getCommonRange(range1, range2, options);
 		return result && new IP(result);
 	}
 
