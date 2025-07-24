@@ -106,6 +106,7 @@ class IPBase {
 
 		ipStr = this.clean(ipStr);
 		if (typeof bitLen === 'number') {
+			if (!Number.isInteger(bitLen)) return null;
 			ipStr = ipStr.replace(/\/\d+$/, '') + '/' + bitLen;
 		}
 
@@ -183,15 +184,25 @@ class IPBase {
 		if (parts.length !== 4 && parts.length !== 8) {
 			throw new Error(`Unexpected error: The IP has ${parts.length} parts.`);
 		}
-
-		// If no CIDR bit length is specified, treat this as a single-address range.
 		const isV4 = parts.length === 4;
-		if (typeof bitLen !== 'number') {
+		if (bitLen != null) {
+			if (!Number.isInteger(bitLen)) {
+				throw new Error(`Unexpected error: bitLen is not an integer.`);
+			}
+			if ((isV4 && (bitLen < 0 || bitLen > 32)) || (!isV4 && (bitLen < 0 || bitLen > 128))) {
+				throw new Error(`Unexpected error: bitLen is out of range for ${isV4 ? 'IPv4' : 'IPv6'}.`);
+			}
+		}
+
+		// If the range represents a single host, skip mask computation:
+		// - No `bitLen` provided (non-CIDR host)
+		// - CIDR explicitly specifies a full-length mask (/32 for IPv4, /128 for IPv6)
+		if (bitLen === null || (isV4 && bitLen === 32) || (!isV4 && bitLen === 128)) {
 			return {
 				first: parts,
 				last: parts,
 				bitLen: isV4 ? 32 : 128,
-				isCidr: false
+				isCidr: bitLen !== null // true for single-host CIDR, false for non-CIDR input
 			};
 		}
 
@@ -376,10 +387,7 @@ class IPBase {
 			return ip.getProperties();
 		}
 		const parsed = this._parse(ip);
-		if (!parsed) {
-			return null;
-		}
-		return this._parseRange(parsed.parts, parsed.bitLen);
+		return parsed && this._parseRange(parsed.parts, parsed.bitLen);
 	}
 
 	/**
@@ -1007,8 +1015,8 @@ class IP extends IPBase {
 	 * @throws {TypeError} If `range` is not a number.
 	 */
 	static newFromRange(ipStr, range) {
-		if (typeof range !== 'number') {
-			throw new TypeError('The "range" parameter for IP.newFromRange must be a number.');
+		if (!Number.isInteger(range)) {
+			throw new TypeError('The "range" parameter for IP.newFromRange must be an integer.');
 		}
 		const parsed = this._parse(ipStr, range);
 		return parsed && new IP(this._parseRange(parsed.parts, parsed.bitLen));
