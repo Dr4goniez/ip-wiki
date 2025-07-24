@@ -93,7 +93,8 @@ class IPBase {
 	 * - Does not handle IPv4-mapped IPv6 addresses (e.g., `::ffff:192.168.0.1`).
 	 *
 	 * @param {string} ipStr The string to parse.
-	 * @param {number} [bitLen] Optional bit length to enforce for CIDR.
+	 * @param {number} [bitLen] Optional bit length to enforce for CIDR. If provided, any bit length
+	 * specified in `ipStr` will be overridden.
 	 * @returns {Parsed?} A parsed object with parts and optional bit length, or `null` if invalid.
 	 * @protected
 	 */
@@ -992,11 +993,8 @@ class IP extends IPBase {
 	 * @returns {IP?} A new `IP` instance if parsing succeeds, or `null` if the input is invalid.
 	 */
 	static newFromText(ipStr) {
-		const { parts, bitLen } = this._parse(ipStr) || { parts: null, bitLen: null };
-		if (!parts) {
-			return null;
-		}
-		return new IP(this._parseRange(parts, bitLen));
+		const parsed = this._parse(ipStr);
+		return parsed && new IP(this._parseRange(parsed.parts, parsed.bitLen));
 	}
 
 	/**
@@ -1012,11 +1010,8 @@ class IP extends IPBase {
 		if (typeof range !== 'number') {
 			throw new TypeError('The "range" parameter for IP.newFromRange must be a number.');
 		}
-		const { parts, bitLen } = this._parse(ipStr, range) || { parts: null, bitLen: null };
-		if (!parts || bitLen === null) { // bitLen should never be null, though
-			return null;
-		}
-		return new IP(this._parseRange(parts, bitLen));
+		const parsed = this._parse(ipStr, range);
+		return parsed && new IP(this._parseRange(parsed.parts, parsed.bitLen));
 	}
 
 	/**
