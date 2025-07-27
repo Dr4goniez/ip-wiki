@@ -85,26 +85,32 @@ class IPBase {
 	 * Returns `null` if the input is invalid or outside expected ranges.
 	 *
 	 * Accepted formats:
-	 * - IPv4: `'x.x.x.x'` or `'x.x.x.x/bitLen'`, where x = `0–255`, bitLen = `0–32`
+	 * - IPv4: `'x.x.x.x'` or `'x.x.x.x/bitLen'`, where `x = 0–255`, `bitLen = 0–32`
 	 * - IPv6: `'xxxx:xxxx:xxxx:xxxx:xxxx:xxxx:xxxx:xxxx'` or shortened `'::'` forms,
-	 *   optional `'/bitLen'` with bitLen = `0–128`
+	 *   optionally with `'/bitLen'`, where `bitLen = 0–128`
 	 *
 	 * Limitations:
-	 * - Does not handle IPv4-mapped IPv6 addresses (e.g., `::ffff:192.168.0.1`).
+	 * - Does not handle IPv4-mapped IPv6 addresses (e.g., `::ffff:192.168.0.1`)
 	 *
 	 * @param {string} ipStr The string to parse.
-	 * @param {number} [bitLen] Optional bit length to enforce for CIDR. If provided, any bit length
-	 * specified in `ipStr` will be overridden.
-	 * @returns {Parsed?} A parsed object with parts and optional bit length, or `null` if invalid.
+	 * @param {object} [options] Optional parsing options.
+	 * @param {number} [options.bitLen] If provided, overrides any CIDR bit length in `ipStr`.
+	 * @param {ParseOptions['suppressFullLengthCidr']} [options.suppressFullLengthCidr=true]
+	 * @returns {?Parsed} A parsed object with parts and optional bit length, or `null` if invalid.
+	 *
+	 * `bitLen` will be `null` if:
+	 * * the input string does not contain a bit length, or
+	 * * `suppressFullLengthCidr` is `true`, and the parsed or specified bit length is either `32`
+	 *   for IPv4 or `128` for IPv6.
 	 * @protected
 	 */
-	static _parse(ipStr, bitLen) {
-
+	static _parse(ipStr, options = {}) {
 		if (typeof ipStr !== 'string') {
 			return null;
 		}
-
 		ipStr = this.clean(ipStr);
+
+		const { bitLen, suppressFullLengthCidr = true } = options;
 		if (typeof bitLen === 'number') {
 			if (!Number.isInteger(bitLen)) return null;
 			ipStr = ipStr.replace(/\/\d+$/, '') + '/' + bitLen;
@@ -121,6 +127,9 @@ class IPBase {
 			if (ret.bitLen !== null && !(0 <= ret.bitLen && ret.bitLen <= 32)) {
 				return null;
 			}
+			if (ret.bitLen === 32 && suppressFullLengthCidr) {
+				ret.bitLen = null;
+			}
 			for (let i = 1; i <= 4; i++) {
 				const num = parseInt(m[i], 10);
 				if (Number.isNaN(num) || num < 0 || num > 255 || m[i].length > 3) {
@@ -132,7 +141,7 @@ class IPBase {
 		}
 
 		// IPv6 pattern
-		m = ipStr.match(/^([\p{Hex_Digit}:]+)(?:\/(\d{1,3}))?$/u);
+		m = ipStr.match(/^([0-9a-fA-F:]+)(?:\/(\d{1,3}))?$/);
 		if (m && !/:::/.test(ipStr) && (ipStr.match(/::/g) || []).length < 2) {
 			/** @type {Parsed} */
 			const ret = {
@@ -141,6 +150,9 @@ class IPBase {
 			};
 			if (ret.bitLen !== null && !(0 <= ret.bitLen && ret.bitLen <= 128)) {
 				return null;
+			}
+			if (ret.bitLen === 128 && suppressFullLengthCidr) {
+				ret.bitLen = null;
 			}
 			ipStr = m[1];
 			let parts = ipStr.split(':');
@@ -172,10 +184,10 @@ class IPBase {
 	 * Accepts both IPv4 and IPv6 addresses, represented as arrays of decimal parts.
 	 * If no `bitLen` is provided, the address is treated as a single host (non-CIDR).
 	 *
-	 * @param {number[]} parts - Array of decimal IP parts:
+	 * @param {number[]} parts Array of decimal IP parts:
 	 * - 4 elements for IPv4 (each `0–255`)
 	 * - 8 elements for IPv6 (each `0–65535`)
-	 * @param {number?} bitLen - Optional CIDR bit length (`0–32` for IPv4, `0–128` for IPv6).
+	 * @param {?number} bitLen Optional CIDR bit length (`0–32` for IPv4, `0–128` for IPv6).
 	 * @returns {RangeObject} Object with the first and last IPs in the range.
 	 * @throws {Error} If `parts` is not a valid IPv4 or IPv6 array.
 	 * @protected
@@ -246,7 +258,7 @@ class IPBase {
 
 		const version = decimals.length === 4 ? 4 : 6;
 		const delimiter = version === 4 ? '.' : ':';
-		const { mode, capitalize } = options;
+		const { format = 'default', capitalize = false } = options;
 
 		/** @type {(number | string)[]} */
 		let parts = version === 6
@@ -254,7 +266,7 @@ class IPBase {
 			: decimals;
 
 		// IPv6 Shortening (RFC 5952)
-		if (mode === 'short' && version === 6) {
+		if (format === 'short' && version === 6) {
 
 			// Find longest zero-run
 			let maxStart = -1, maxLen = 0;
@@ -293,7 +305,7 @@ class IPBase {
 		}
 
 		// Long mode zero-padding
-		if (mode === 'long') {
+		if (format === 'long') {
 			const padLen = version === 4 ? 3 : 4;
 			parts = parts.map((el) => {
 				const str = el.toString();
@@ -309,15 +321,15 @@ class IPBase {
 	 * Parses and stringifies an IP string with optional filtering.
 	 *
 	 * @param {string} ipStr IP address or CIDR string to parse.
-	 * @param {StringifyOptions} options Formatting options for output.
-	 * @param {ConditionPredicate} [conditionPredicate] Optional callback to filter addresses.
-	 * @returns {string?} Formatted IP string, or `null` if:
+	 * @param {IPOptions} options Formatting options for output.
+	 * @returns {?string} Formatted IP string, or `null` if:
 	 * - The input is invalid.
 	 * - The address fails the `conditionPredicate`.
 	 * @protected
 	 */
-	static _parseAndStringify(ipStr, options, conditionPredicate) {
-		const parsed = this._parse(ipStr);
+	static _parseAndStringify(ipStr, options) {
+		const { format, capitalize, conditionPredicate, suppressFullLengthCidr = true } = options;
+		const parsed = this._parse(ipStr, { suppressFullLengthCidr });
 		if (!parsed) {
 			return null;
 		}
@@ -335,7 +347,7 @@ class IPBase {
 		const normalized = this._parseRange(parts, bitLen);
 		const suffix = isCidr ? '/' + bitLen : '';
 
-		return this._stringify(normalized.first, suffix, options);
+		return this._stringify(normalized.first, suffix, { format, capitalize });
 	}
 
 	/**
@@ -344,7 +356,7 @@ class IPBase {
 	 * @param {RangeObject} ip1 Range object of the first IP (typically the "narrower" one).
 	 * @param {string | IP} ip2 IP string or IP instance to compare against.
 	 * @param {"<" | ">"} comparator Use `<` to check if `ip2` contains `ip1`, or `>` if `ip1` contains `ip2`.
-	 * @returns {boolean?} `null` if `ip2` is not a valid IP; `false` if not contained; `true` otherwise.
+	 * @returns {?boolean} `null` if `ip2` is not a valid IP; `false` if not contained; `true` otherwise.
 	 * @protected
 	 */
 	static _compareRanges(ip1, ip2, comparator) {
@@ -379,15 +391,29 @@ class IPBase {
 	 * Converts an IP string or IP instance into a range object.
 	 *
 	 * @param {string | IP} ip IP/CIDR string or IP instance.
-	 * @returns {RangeObject?} Range object for the given IP, or `null` if invalid.
+	 * @param {ParseOptions & { bitLen?: number; }} [options] Optional parsing options used
+	 * when the input is a string. `bitLen` is an additional option for {@link _parse}.
+	 * @returns {?RangeObject} Range object for the given IP, or `null` if invalid.
 	 * @protected
 	 */
-	static _getRangeObject(ip) {
+	static _getRangeObject(ip, options = {}) {
 		if (ip instanceof IP) {
 			return ip.getProperties();
 		}
-		const parsed = this._parse(ip);
-		return parsed && this._parseRange(parsed.parts, parsed.bitLen);
+		const { conditionPredicate, suppressFullLengthCidr = true } = options;
+		const parsed = this._parse(ip, { suppressFullLengthCidr, bitLen: options.bitLen });
+		if (!parsed) {
+			return null;
+		}
+		const { parts, bitLen } = parsed;
+		if (typeof conditionPredicate === 'function') {
+			const isV4 = parts.length === 4;
+			const isCidr = bitLen !== null;
+			if (!conditionPredicate(isV4 ? 4 : 6, isCidr)) {
+				return null;
+			}
+		}
+		return this._parseRange(parts, bitLen);
 	}
 
 	/**
@@ -397,7 +423,7 @@ class IPBase {
 	 *
 	 * @param {RangeObject} ipObj Range object of the first IP.
 	 * @param {string | IP} ipStr IP string, CIDR, or IP instance to compare.
-	 * @returns {boolean?} `true` if equal, `false` if not equal, `null` if second input is invalid.
+	 * @returns {?boolean} `true` if equal, `false` if not equal, `null` if second input is invalid.
 	 * @protected
 	 */
 	static _checkEquality(ipObj, ipStr) {
@@ -465,7 +491,7 @@ class IPBase {
 			if (verbose) {
 				const ips = [range1, range2].map((r) => {
 					const suffix = r.isCidr ? `/${r.bitLen}` : '';
-					return this._stringify(r.first, suffix, { mode: 'short' });
+					return this._stringify(r.first, suffix, { format: 'short' });
 				});
 				console.warn(`"range1" and "range2" must be of the same version: ${ips.join(', ')}`);
 			}
@@ -488,6 +514,17 @@ class IPBase {
 
 		// Calculate the common prefix length
 		let commonPrefixLen = 0;
+		/**
+		 * Logs a warning and returns `null` if the computed prefix length is outside the allowed range.
+		 *
+		 * @returns {null}
+		 */
+		const errOutsideAllowedRange = () => {
+			if (verbose) {
+				console.warn(`Computed prefix length ${commonPrefixLen} is outside allowed range (${minAllowed}–${maxAllowed}).`);
+			}
+			return null;
+		};
 
 		for (let i = 0; i < len; i++) {
 			// Per-bit comparison in each IP part
@@ -498,7 +535,7 @@ class IPBase {
 					if (commonPrefixLen < minAllowed || commonPrefixLen > maxAllowed) {
 						return errOutsideAllowedRange();
 					}
-					return this._parseRange(first, getBitLength());
+					return this._parseRange(first, commonPrefixLen);
 				}
 				commonPrefixLen++;
 			}
@@ -508,31 +545,7 @@ class IPBase {
 		if (commonPrefixLen < minAllowed || commonPrefixLen > maxAllowed) {
 			return errOutsideAllowedRange();
 		}
-		return this._parseRange(first, getBitLength());
-
-		/**
-		 * Logs a warning and returns `null` if the computed prefix length is outside the allowed range.
-		 *
-		 * @returns {null}
-		 */
-		function errOutsideAllowedRange() {
-			if (verbose) {
-				console.warn(`Computed prefix length ${commonPrefixLen} is outside allowed range (${minAllowed}–${maxAllowed}).`);
-			}
-			return null;
-		}
-
-		/**
-		 * Returns the prefix length unless it represents the full length of the address space (i.e. /32 or /128),
-		 * in which case `null` is returned. This is used to omit redundant prefix notation for single-IP ranges.
-		 *
-		 * @returns {number?}
-		 */
-		function getBitLength() {
-			return (isV4 && commonPrefixLen !== 32) || (!isV4 && commonPrefixLen !== 128)
-				? commonPrefixLen
-				: null;
-		}
+		return this._parseRange(first, commonPrefixLen);
 	}
 
 	/**
@@ -623,15 +636,15 @@ class IPUtil extends IPBase {
 	 * * Output: `fd12:3456:789a:1:0:0:0:0/64`
 	 *
 	 * @param {string} ipStr IP or CIDR string to sanitize.
-	 * @param {boolean} [capitalize=false] Whether to capitalize the output.
-	 * @param {ConditionPredicate} [conditionPredicate]
-	 * Optional condition for filtering valid IPs.
-	 * @returns {string?} Sanitized string, or `null` if:
+	 * @param {IPOptions} [options] Optional formatting and parsing options, where {@link IPOptions.format | `format`}
+	 * is coerced into `"default"`.
+	 * @returns {?string} Sanitized string, or `null` if:
 	 * * The input string does not represent an IP address.
-	 * * The parsed IP address does not meet the conditions specified by `conditionPredicate`
+	 * * The parsed IP address does not meet the conditions specified by {@link IPOptions.conditionPredicate | `conditionPredicate`}.
 	 */
-	static sanitize(ipStr, capitalize, conditionPredicate) {
-		return this._parseAndStringify(ipStr, { capitalize: !!capitalize }, conditionPredicate);
+	static sanitize(ipStr, options = {}) {
+		const format = /** @type {const} */ ({ format: 'default' });
+		return this._parseAndStringify(ipStr, Object.assign({}, options, format));
 	}
 
 	/**
@@ -646,14 +659,15 @@ class IPUtil extends IPBase {
 	 * * Output: `fd12:3456:789a:1::/64`
 	 *
 	 * @param {string} ipStr IP or CIDR string to abbreviate.
-	 * @param {boolean} [capitalize=false] Whether to capitalize the output.
-	 * @param {ConditionPredicate} [conditionPredicate] Optional condition for filtering valid IPs.
-	 * @returns {string?} Abbreviated string, or `null` if:
+	 * @param {IPOptions} [options] Optional formatting and parsing options, where {@link IPOptions.format | `format`}
+	 * is coerced into `"short"`.
+	 * @returns {?string} Abbreviated string, or `null` if:
 	 * * The input string does not represent an IP address.
-	 * * The parsed IP address does not meet the conditions specified by `conditionPredicate`
+	 * * The parsed IP address does not meet the conditions specified by {@link IPOptions.conditionPredicate | `conditionPredicate`}.
 	 */
-	static abbreviate(ipStr, capitalize, conditionPredicate) {
-		return this._parseAndStringify(ipStr, { mode: 'short', capitalize: !!capitalize }, conditionPredicate);
+	static abbreviate(ipStr, options = {}) {
+		const format = /** @type {const} */ ({ format: 'short' });
+		return this._parseAndStringify(ipStr, Object.assign({}, options, format));
 	}
 
 	/**
@@ -668,14 +682,15 @@ class IPUtil extends IPBase {
 	 * * Output: `fd12:3456:789a:0001:0000:0000:0000:0000/64`
 	 *
 	 * @param {string} ipStr IP or CIDR string to expand.
-	 * @param {boolean} [capitalize=false] Whether to capitalize the output.
-	 * @param {ConditionPredicate} [conditionPredicate] Optional condition for filtering valid IPs.
-	 * @returns {string?} Expanded string, or `null` if:
+	 * @param {IPOptions} [options] Optional formatting and parsing options, where {@link IPOptions.format | `format`}
+	 * is coerced into `"long"`.
+	 * @returns {?string} Expanded string, or `null` if:
 	 * * The input string does not represent an IP address.
-	 * * The parsed IP address does not meet the conditions specified by `conditionPredicate`
+	 * * The parsed IP address does not meet the conditions specified by {@link IPOptions.conditionPredicate | `conditionPredicate`}.
 	 */
-	static lengthen(ipStr, capitalize, conditionPredicate) {
-		return this._parseAndStringify(ipStr, { mode: 'long', capitalize: !!capitalize }, conditionPredicate);
+	static lengthen(ipStr, options = {}) {
+		const format = /** @type {const} */ ({ format: 'long' });
+		return this._parseAndStringify(ipStr, Object.assign({}, options, format));
 	}
 
 	/**
@@ -693,29 +708,39 @@ class IPUtil extends IPBase {
 	 *
 	 * @param {string} ipStr The IP or CIDR string to validate.
 	 * @param {boolean | StrictCIDR} allowCidr Whether to allow CIDRs, or require strict CIDR format.
-	 * @param {ConditionPredicate} [conditionPredicate] Optional function to apply additional validation.
-	 * @param {StringifyOptions} [options] Output formatting options (used only if returning a string).
+	 * @param {Omit<IPOptions, 'suppressFullLengthCidr'>} [options] Optional formatting and parsing options.
 	 * @returns {boolean | string} See above.
 	 * @protected
 	 */
-	static _validate(ipStr, allowCidr, conditionPredicate, options) {
-		const { parts, bitLen } = this._parse(ipStr) || { parts: null, bitLen: null };
+	static _validate(ipStr, allowCidr, options = {}) {
+		const { format, capitalize, conditionPredicate } = options;
+		const parsed = this._parse(ipStr, {
+			// Parse the input string as-is, without applying any tricky conditions
+			suppressFullLengthCidr: false
+		});
+		if (!parsed) {
+			return false;
+		}
+		const { parts, bitLen } = parsed;
+		const isV4 = parts.length === 4;
 		const isCidr = bitLen !== null;
 		if (
-			// Not a valid IP, or
-			!parts ||
 			// Disallowed to be CIDR but is CIDR, or
 			!allowCidr && isCidr ||
 			// Doesn't meet the conditions of the predicate
-			conditionPredicate && !conditionPredicate(parts.length === 4 ? 4 : 6, isCidr)
+			conditionPredicate && !conditionPredicate(isV4 ? 4 : 6, isCidr)
 		) {
 			return false;
 		}
-		if (allowCidr === 'strict' && isCidr) {
-			// On strict CIDR validation mode, return a corrected CIDR if the prefix is inaccurate
+		// On strict CIDR validation mode, return a corrected CIDR if the prefix is inaccurate
+		// We ignore full-length CIDRs here because their prefixes never vary
+		if (
+			allowCidr === 'strict' && isCidr &&
+			!(isV4 && bitLen === 32 || !isV4 && bitLen === 128)
+		) {
 			const { first } = this._parseRange(parts, bitLen);
 			if (!first.every((num, i) => num === parts[i])) {
-				return this._stringify(first, '/' + bitLen, options);
+				return this._stringify(first, '/' + bitLen, { format, capitalize });
 			}
 		}
 		return true;
@@ -730,7 +755,7 @@ class IPUtil extends IPBase {
 	 * @returns {boolean | string} Returns `true` if valid, `false` if invalid, or a normalized CIDR string.
 	 */
 	static isIP(ipStr, allowCidr = false, options = {}) {
-		return this._validate(ipStr, allowCidr, void 0, options);
+		return this._validate(ipStr, allowCidr, options);
 	}
 
 	/**
@@ -742,7 +767,10 @@ class IPUtil extends IPBase {
 	 * @returns {boolean | string} Returns `true` if valid, `false` if invalid, or a normalized CIDR string.
 	 */
 	static isIPv4(ipStr, allowCidr = false, options = {}) {
-		return this._validate(ipStr, allowCidr, (v) => v === 4, options);
+		const { format = options.mode, capitalize } = options;
+		return this._validate(ipStr, allowCidr, { format, capitalize,
+			conditionPredicate: (v) => v === 4
+		});
 	}
 
 	/**
@@ -754,7 +782,10 @@ class IPUtil extends IPBase {
 	 * @returns {boolean | string} Returns `true` if valid, `false` if invalid, or a normalized CIDR string.
 	 */
 	static isIPv6(ipStr, allowCidr = false, options = {}) {
-		return this._validate(ipStr, allowCidr, (v) => v === 6, options);
+		const { format = options.mode, capitalize } = options;
+		return this._validate(ipStr, allowCidr, { format, capitalize,
+			conditionPredicate: (v) => v === 6
+		});
 	}
 
 	/**
@@ -765,9 +796,12 @@ class IPUtil extends IPBase {
 	 * @param {StringifyOptions} [options] Formatting options for corrected CIDRs.
 	 * @returns {boolean | string} Returns `true` if valid, `false` if invalid, or a normalized CIDR string.
 	 */
-	static isCIDR(ipStr, mode, options) {
+	static isCIDR(ipStr, mode, options = {}) {
 		const allowCidr = mode === 'strict' ? mode : true;
-		return this._validate(ipStr, allowCidr, (_, isCidr) => isCidr, options);
+		const { format = options.mode, capitalize } = options;
+		return this._validate(ipStr, allowCidr, { format, capitalize,
+			conditionPredicate: (_, isCidr) => isCidr
+		});
 	}
 
 	/**
@@ -778,9 +812,12 @@ class IPUtil extends IPBase {
 	 * @param {StringifyOptions} [options] Formatting options for corrected CIDRs.
 	 * @returns {boolean | string} Returns `true` if valid, `false` if invalid, or a normalized CIDR string.
 	 */
-	static isIPv4CIDR(ipStr, mode, options) {
+	static isIPv4CIDR(ipStr, mode, options = {}) {
 		const allowCidr = mode === 'strict' ? mode : true;
-		return this._validate(ipStr, allowCidr, (v, isCidr) => v === 4 && isCidr, options);
+		const { format = options.mode, capitalize } = options;
+		return this._validate(ipStr, allowCidr, { format, capitalize,
+			conditionPredicate: (v, isCidr) => v === 4 && isCidr
+		});
 	}
 
 	/**
@@ -791,9 +828,12 @@ class IPUtil extends IPBase {
 	 * @param {StringifyOptions} [options] Formatting options for corrected CIDRs.
 	 * @returns {boolean | string} Returns `true` if valid, `false` if invalid, or a normalized CIDR string.
 	 */
-	static isIPv6CIDR(ipStr, mode, options) {
+	static isIPv6CIDR(ipStr, mode, options = {}) {
 		const allowCidr = mode === 'strict' ? mode : true;
-		return this._validate(ipStr, allowCidr, (v, isCidr) => v === 6 && isCidr, options);
+		const { format = options.mode, capitalize } = options;
+		return this._validate(ipStr, allowCidr, { format, capitalize,
+			conditionPredicate: (v, isCidr) => v === 6 && isCidr
+		});
 	}
 
 	/**
@@ -801,7 +841,7 @@ class IPUtil extends IPBase {
 	 *
 	 * @param {string | IP} ipStr The target IP address to evaluate.
 	 * @param {string | IP} cidrStr The CIDR string or IP instance representing the range.
-	 * @returns {boolean?} `true` if `ipStr` is within the range of `cidrStr`, `false` if not, or `null`
+	 * @returns {?boolean} `true` if `ipStr` is within the range of `cidrStr`, `false` if not, or `null`
 	 * if either input is invalid.
 	 */
 	static isInRange(ipStr, cidrStr) {
@@ -817,7 +857,7 @@ class IPUtil extends IPBase {
 	 *
 	 * @param {string | IP} ipStr The IP address to evaluate.
 	 * @param {(string | IP)[]} cidrArr An array of CIDR strings or IP instances to check against.
-	 * @returns {number?} The index of the first matching CIDR in the array, `-1` if none match, or `null`
+	 * @returns {?number} The index of the first matching CIDR in the array, `-1` if none match, or `null`
 	 * if `ipStr` is invalid.
 	 */
 	static isInAnyRange(ipStr, cidrArr) {
@@ -833,7 +873,7 @@ class IPUtil extends IPBase {
 	 *
 	 * @param {string | IP} ipStr The IP address to evaluate.
 	 * @param {(string | IP)[]} cidrArr An array of CIDR strings or IP instances to check against.
-	 * @returns {boolean?} `true` if the IP is within all CIDRs, `false` if not, or `null` if `ipStr` is invalid
+	 * @returns {?boolean} `true` if the IP is within all CIDRs, `false` if not, or `null` if `ipStr` is invalid
 	 * or `cidrArr` is not an array or an empty array.
 	 */
 	static isInAllRanges(ipStr, cidrArr) {
@@ -852,7 +892,7 @@ class IPUtil extends IPBase {
 	 *
 	 * @param {string | IP} cidrStr The CIDR string or IP instance representing the containing range.
 	 * @param {string | IP} ipStr The target IP address to check.
-	 * @returns {boolean?} `true` if `cidrStr` contains `ipStr`, `false` if not, or `null` if either input is invalid.
+	 * @returns {?boolean} `true` if `cidrStr` contains `ipStr`, `false` if not, or `null` if either input is invalid.
 	 */
 	static contains(cidrStr, ipStr) {
 		const cidr = this._getRangeObject(cidrStr);
@@ -867,7 +907,7 @@ class IPUtil extends IPBase {
 	 *
 	 * @param {string | IP} cidrStr The CIDR string or IP instance representing the containing range.
 	 * @param {(string | IP)[]} ipArr An array of IP or CIDR strings or IP instances to test.
-	 * @returns {number?} The index of the first match in `ipArr`, `-1` if none match, or `null` if `cidrStr` is invalid.
+	 * @returns {?number} The index of the first match in `ipArr`, `-1` if none match, or `null` if `cidrStr` is invalid.
 	 */
 	static containsAny(cidrStr, ipArr) {
 		const cidr = this._getRangeObject(cidrStr);
@@ -882,7 +922,7 @@ class IPUtil extends IPBase {
 	 *
 	 * @param {string | IP} cidrStr The CIDR string or IP instance representing the containing range.
 	 * @param {(string | IP)[]} ipArr An array of IP or CIDR strings or IP instances to test.
-	 * @returns {boolean?} `true` if all IPs are contained, `false` if any are not, or `null` if `cidrStr` is invalid or
+	 * @returns {?boolean} `true` if all IPs are contained, `false` if any are not, or `null` if `cidrStr` is invalid or
 	 * `ipArr` is not an array or an empty array.
 	 */
 	static containsAll(cidrStr, ipArr) {
@@ -901,7 +941,7 @@ class IPUtil extends IPBase {
 	 *
 	 * @param {string | IP} ipStr1 The first IP address to compare.
 	 * @param {string | IP} ipStr2 The second IP address to compare.
-	 * @returns {boolean?} `true` if the IPs are equal, `false` if not, or `null` if either input is invalid.
+	 * @returns {?boolean} `true` if the IPs are equal, `false` if not, or `null` if either input is invalid.
 	 */
 	static equals(ipStr1, ipStr2) {
 		const ip1 = this._getRangeObject(ipStr1);
@@ -916,7 +956,7 @@ class IPUtil extends IPBase {
 	 *
 	 * @param {string | IP} ipStr The IP address to compare.
 	 * @param {(string | IP)[]} ipArr An array of IP or CIDR strings or IP instances to check against.
-	 * @returns {number?} The index of the first match in `ipArr`, `-1` if none match, or `null` if `ipStr` is invalid.
+	 * @returns {?number} The index of the first match in `ipArr`, `-1` if none match, or `null` if `ipStr` is invalid.
 	 */
 	static equalsAny(ipStr, ipArr) {
 		const ip1 = this._getRangeObject(ipStr);
@@ -931,7 +971,7 @@ class IPUtil extends IPBase {
 	 *
 	 * @param {string | IP} ipStr The IP address to compare.
 	 * @param {(string | IP)[]} ipArr An array of IP or CIDR strings or IP instances to compare against.
-	 * @returns {boolean?} `true` if all addresses are equal to `ipStr`, `false` otherwise, or `null` if `ipStr` is invalid
+	 * @returns {?boolean} `true` if all addresses are equal to `ipStr`, `false` otherwise, or `null` if `ipStr` is invalid
 	 * or `ipArr` is not an array or an empty array.
 	 */
 	static equalsAll(ipStr, ipArr) {
@@ -952,7 +992,7 @@ class IPUtil extends IPBase {
 	 * @param {string | IP} ip1 First IP address or CIDR to intersect.
 	 * @param {string | IP} ip2 Second IP address or CIDR to intersect.
 	 * @param {IntersectOptions} [options] Optional prefix length constraints and verbosity flag.
-	 * @returns {IP?} An {@link IP} instance representing the narrowest common range, or `null` if:
+	 * @returns {?IP} An {@link IP} instance representing the narrowest common range, or `null` if:
 	 * - Either `ip1` or `ip2` is invalid.
 	 * - The IP versions differ (e.g., one is IPv4 and the other is IPv6).
 	 */
@@ -997,29 +1037,36 @@ class IP extends IPBase {
 	/**
 	 * Initializes an IP instance from a string.
 	 *
-	 * @param {string} ipStr An IP- or CIDR-representing string.
-	 * @returns {IP?} A new `IP` instance if parsing succeeds, or `null` if the input is invalid.
+	 * @param {string | IP} ipStr An IP- or CIDR-representing string.
+	 *
+	 * If an `IP` instance is passed, it will be cloned (unless prevented by `options`).
+	 * @param {ParseOptions} [options] Optional parsing options for the input string.
+	 * @returns {?IP} A new `IP` instance if parsing succeeds, or `null` if the input is invalid.
 	 */
-	static newFromText(ipStr) {
-		const parsed = this._parse(ipStr);
-		return parsed && new IP(this._parseRange(parsed.parts, parsed.bitLen));
+	static newFromText(ipStr, options = {}) {
+		const initializer = this._getRangeObject(ipStr, options);
+		return initializer && new IP(initializer);
 	}
 
 	/**
 	 * Initializes an IP instance from a string and a range (*aka.* a bit length).
 	 *
-	 * @param {string} ipStr An IP- or CIDR-representing string. If a CIDR string is passed, the `/XX` part
-	 * will be overridden by `range`.
+	 * @param {string | IP} ipStr An IP- or CIDR-representing string. If a CIDR string is passed, the `/XX`
+	 * part will be overridden by `range`.
+	 *
+	 * If an `IP` instance is passed, the method attemps to convert it to a new instance with the given `range`
+	 * (unless prevented by `options`).
 	 * @param {number} range The desired CIDR bit length (0–32 for IPv4, 0–128 for IPv6).
-	 * @returns {IP?} A new `IP` instance if parsing succeeds, or `null` if the input or range is invalid.
+	 * @param {ParseOptions} [options] Optional parsing options for the input string.
+	 * @returns {?IP} A new `IP` instance if parsing succeeds, or `null` if the input or range is invalid.
 	 * @throws {TypeError} If `range` is not a number.
 	 */
-	static newFromRange(ipStr, range) {
+	static newFromRange(ipStr, range, options = {}) {
 		if (!Number.isInteger(range)) {
 			throw new TypeError('The "range" parameter for IP.newFromRange must be an integer.');
 		}
-		const parsed = this._parse(ipStr, range);
-		return parsed && new IP(this._parseRange(parsed.parts, parsed.bitLen));
+		const initializer = this._getRangeObject(ipStr, Object.assign({ bitLen: range }, options));
+		return initializer && new IP(initializer);
 	}
 
 	/**
@@ -1088,10 +1135,10 @@ class IP extends IPBase {
 	/**
 	 * Gets the IP version as a string in the format `IPv4` or `IPv6`.
 	 *
-	 * @returns {string} A string representation of the IP version.
+	 * @returns {'IPv4' | 'IPv6'} A string representation of the IP version.
 	 */
 	getVersion() {
-		return 'IPv' + this.version;
+		return `IPv${this.version}`;
 	}
 
 	/**
@@ -1125,40 +1172,40 @@ class IP extends IPBase {
 	/**
 	 * Returns the stringified form of this IP or CIDR block in an abbreviated format.
 	 *
-	 * This is a shorthand method of {@link stringify} with the {@link StringifyOptions.mode | mode}
+	 * This is a shorthand method of {@link stringify} with the {@link StringifyOptions.format | `format`}
 	 * option set to `'short'`.
 	 *
 	 * @param {boolean} [capitalize=false] Whether to capitalize the output.
 	 * @returns A properly formatted string representation of the IP or CIDR.
 	 */
 	abbreviate(capitalize = false) {
-		return this.stringify({ capitalize, mode: 'short' });
+		return this.stringify({ capitalize, format: 'short' });
 	}
 
 	/**
 	 * Returns the stringified form of this IP or CIDR block in a sanitized format.
 	 *
-	 * This is a shorthand method of {@link stringify} with the {@link StringifyOptions.mode | mode}
-	 * option unset.
+	 * This is a shorthand method of {@link stringify} with the {@link StringifyOptions.format | `format`}
+	 * option set to `'default'`.
 	 *
 	 * @param {boolean} [capitalize=false] Whether to capitalize the output.
 	 * @returns A properly formatted string representation of the IP or CIDR.
 	 */
 	sanitize(capitalize = false) {
-		return this.stringify({ capitalize });
+		return this.stringify({ capitalize, format: 'default' });
 	}
 
 	/**
 	 * Returns the stringified form of this IP or CIDR block in a lengthened format.
 	 *
-	 * This is a shorthand method of {@link stringify} with the {@link StringifyOptions.mode | mode}
+	 * This is a shorthand method of {@link stringify} with the {@link StringifyOptions.format | `format`}
 	 * option set to `'long'`.
 	 *
 	 * @param {boolean} [capitalize=false] Whether to capitalize the output.
 	 * @returns A properly formatted string representation of the IP or CIDR.
 	 */
 	lengthen(capitalize = false) {
-		return this.stringify({ capitalize, mode: 'long' });
+		return this.stringify({ capitalize, format: 'long' });
 	}
 
 	/**
@@ -1269,7 +1316,7 @@ class IP extends IPBase {
 	 * Checks whether the IP address associated with this instance is within the CIDR range of another.
 	 *
 	 * @param {string | IP} cidrStr The CIDR string or IP instance representing the range.
-	 * @returns {boolean?} A boolean indicating whether the IP address is within the CIDR range, or
+	 * @returns {?boolean} A boolean indicating whether the IP address is within the CIDR range, or
 	 * `null` if `cidrStr` is invalid.
 	 */
 	isInRange(cidrStr) {
@@ -1291,7 +1338,7 @@ class IP extends IPBase {
 	 * Checks whether the IP address associated with this instance is within all CIDR ranges in the array.
 	 *
 	 * @param {(string | IP)[]} cidrArr An array of CIDR strings or IP instances to check against.
-	 * @returns {boolean?} `true` if the IP is within all CIDRs, `false` if not, or `null` if `cidrArr` is
+	 * @returns {?boolean} `true` if the IP is within all CIDRs, `false` if not, or `null` if `cidrArr` is
 	 * not an array or an empty array.
 	 */
 	isInAllRanges(cidrArr) {
@@ -1306,7 +1353,7 @@ class IP extends IPBase {
 	 * Checks whether the CIDR range associated with this instance contains the specified IP address.
 	 *
 	 * @param {string | IP} ipStr The target IP address to check.
-	 * @returns {boolean?} `true` if the CIDR range contains `ipStr`, `false` if not, or `null` if `ipStr` is invalid.
+	 * @returns {?boolean} `true` if the CIDR range contains `ipStr`, `false` if not, or `null` if `ipStr` is invalid.
 	 */
 	contains(ipStr) {
 		return IP._compareRanges(this.getProperties(), ipStr, '>');
@@ -1327,7 +1374,7 @@ class IP extends IPBase {
 	 * Checks whether the CIDR range associated with this instance contains all of the IP addresses in the array.
 	 *
 	 * @param {(string | IP)[]} ipArr An array of IP or CIDR strings or IP instances to test.
-	 * @returns {boolean?} `true` if all IPs are contained, `false` if any are not, or `null` if
+	 * @returns {?boolean} `true` if all IPs are contained, `false` if any are not, or `null` if
 	 * `ipArr` is not an array or an empty array.
 	 */
 	containsAll(ipArr) {
@@ -1342,7 +1389,7 @@ class IP extends IPBase {
 	 * Checks whether the IP address associated with this intance is equal to a given IP address.
 	 *
 	 * @param {string | IP} ipStr The IP address to compare.
-	 * @returns {boolean?} `true` if the IPs are equal, `false` if not, or `null` if `ipStr` is invalid.
+	 * @returns {?boolean} `true` if the IPs are equal, `false` if not, or `null` if `ipStr` is invalid.
 	 */
 	equals(ipStr) {
 		const props = this.getProperties();
@@ -1364,7 +1411,7 @@ class IP extends IPBase {
 	 * Checks whether the IP address associated with this intance is equal to all addresses in a given array.
 	 *
 	 * @param {(string | IP)[]} ipArr An array of IP or CIDR strings or IP instances to compare against.
-	 * @returns {boolean?} `true` if all addresses are equal to this IP instance, `false` otherwise, or
+	 * @returns {?boolean} `true` if all addresses are equal to this IP instance, `false` otherwise, or
 	 * `null` if `ipArr` is not an array or an empty array.
 	 */
 	equalsAll(ipArr) {
@@ -1381,7 +1428,7 @@ class IP extends IPBase {
 	 *
 	 * @param {string | IP} ip IP address or CIDR string to intersect with this instance.
 	 * @param {IntersectOptions} [options] Optional prefix length constraints and verbosity flag.
-	 * @returns {IP?} A new {@link IP} instance representing the narrowest common CIDR range, or `null` if:
+	 * @returns {?IP} A new {@link IP} instance representing the narrowest common CIDR range, or `null` if:
 	 * - The input `ip` is invalid.
 	 * - The IP versions differ.
 	 */
@@ -1407,6 +1454,8 @@ class IP extends IPBase {
  * @typedef {import('./IP-types.ts').Parsed} Parsed
  * @typedef {import('./IP-types.ts').RangeObject} RangeObject
  * @typedef {import('./IP-types.ts').StringifyOptions} StringifyOptions
+ * @typedef {import('./IP-types.ts').ParseOptions} ParseOptions
+ * @typedef {import('./IP-types.ts').IPOptions} IPOptions
  * @typedef {import('./IP-types.ts').StrictCIDR} StrictCIDR
  * @typedef {import('./IP-types.ts').ConditionPredicate} ConditionPredicate
  * @typedef {import('./IP-types.ts').IntersectOptions} IntersectOptions

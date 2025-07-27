@@ -21,8 +21,6 @@ export interface Parsed {
  * Represents the parsing result of the original IP string, forcibly interpreted
  * as a CIDR address. "Forcible interpretation" means any address is treated as
  * CIDR internally, even single IPs like `192.168.0.1 → 192.168.0.1/32`.
- *
- * @interface
  */
 export interface RangeObject {
 	/**
@@ -50,7 +48,7 @@ export interface StringifyOptions {
 	/**
 	 * Address formatting style:
 	 *
-	 * - `undefined` (default):
+	 * - `'default'` (default):
 	 *   - IPv4 returns sanitized form (e.g., `192.168.0.1`)
 	 *   - IPv6 returns condensed form without aggressive shortening (e.g., `fd12:3456:789a:1:0:0:0:0`)
 	 *
@@ -61,12 +59,50 @@ export interface StringifyOptions {
 	 *   - IPv4: `192.168.000.001`
 	 *   - IPv6: `fd12:3456:789a:0001:0000:0000:0000:0000`
 	 */
-	mode?: "short" | "long";
+	format?: 'default' | 'short' | 'long';
+	/**
+	 * Use {@link format} instead.
+	 *
+	 * @deprecated
+	 */
+	mode?: 'short' | 'long';
 	/**
 	 * Whether to convert output to uppercase (applies to IPv6 hex segments).
 	 */
 	capitalize?: boolean;
 }
+
+/**
+ * Options for parsing IP string input.
+ */
+export interface ParseOptions {
+	/**
+	 * Optional callback to filter IP addresses by version or CIDR status.
+	 *
+	 * @param version IP version (`4` for IPv4, `6` for IPv6).
+	 * @param isCidr Whether the address includes a CIDR suffix.
+	 * @returns `true` to accept the address, `false` to reject.
+	 */
+	conditionPredicate?: (version: 4 | 6, isCidr: boolean) => boolean;
+	/**
+	 * Whether to suppress explicit full-length CIDRs (i.e., `/32` for IPv4 and `/128` for IPv6).
+	 *
+	 * When `true`, these CIDRs are treated as plain host addresses rather than as CIDR ranges.
+	 * (Default: `true`)
+	 *
+	 * For example, if the input string is `"192.168.0.1/32"` and this option is `true`, the
+	 * bit length is suppressed and the address is parsed as `"192.168.0.1"`.
+	 */
+	suppressFullLengthCidr?: boolean;
+}
+
+/**
+ * Combined options for parsing and formatting IP addresses.
+ *
+ * This interface is an amalgamation of both {@link ParseOptions} and {@link StringifyOptions},
+ * allowing configuration of both input parsing behavior and output formatting style.
+ */
+export interface IPOptions extends StringifyOptions, ParseOptions {}
 
 /**
  * The strict CIDR validation mode ensures that CIDR addresses have a matching prefix
@@ -96,14 +132,12 @@ export interface StringifyOptions {
  * console.log(IPUtil.isIP('192.168.0.0/24', 'strict')); // true
  * ```
  */
-export type StrictCIDR = "strict";
+export type StrictCIDR = 'strict';
 
 /**
- * Optional callback to filter IP addresses by version or CIDR status.
+ * Use {@link ParseOptions.conditionPredicate} instead.
  *
- * @param version IP version (`4` for IPv4, `6` for IPv6).
- * @param isCidr Whether the address includes a CIDR suffix.
- * @returns `true` to accept the address, `false` to reject.
+ * @deprecated
  */
 export type ConditionPredicate = (version: 4 | 6, isCidr: boolean) => boolean;
 
