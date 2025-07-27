@@ -755,7 +755,8 @@ class IPUtil extends IPBase {
 	 * @returns {boolean | string} Returns `true` if valid, `false` if invalid, or a normalized CIDR string.
 	 */
 	static isIP(ipStr, allowCidr = false, options = {}) {
-		return this._validate(ipStr, allowCidr, options);
+		const { format = options.mode, capitalize } = options; // Destructured only for consistency
+		return this._validate(ipStr, allowCidr, { format, capitalize });
 	}
 
 	/**
@@ -768,9 +769,7 @@ class IPUtil extends IPBase {
 	 */
 	static isIPv4(ipStr, allowCidr = false, options = {}) {
 		const { format = options.mode, capitalize } = options;
-		return this._validate(ipStr, allowCidr, { format, capitalize,
-			conditionPredicate: (v) => v === 4
-		});
+		return this._validate(ipStr, allowCidr, { format, capitalize, conditionPredicate: (v) => v === 4 });
 	}
 
 	/**
@@ -783,9 +782,7 @@ class IPUtil extends IPBase {
 	 */
 	static isIPv6(ipStr, allowCidr = false, options = {}) {
 		const { format = options.mode, capitalize } = options;
-		return this._validate(ipStr, allowCidr, { format, capitalize,
-			conditionPredicate: (v) => v === 6
-		});
+		return this._validate(ipStr, allowCidr, { format, capitalize, conditionPredicate: (v) => v === 6 });
 	}
 
 	/**
@@ -799,9 +796,7 @@ class IPUtil extends IPBase {
 	static isCIDR(ipStr, mode, options = {}) {
 		const allowCidr = mode === 'strict' ? mode : true;
 		const { format = options.mode, capitalize } = options;
-		return this._validate(ipStr, allowCidr, { format, capitalize,
-			conditionPredicate: (_, isCidr) => isCidr
-		});
+		return this._validate(ipStr, allowCidr, { format, capitalize, conditionPredicate: (_, isCidr) => isCidr });
 	}
 
 	/**
@@ -815,9 +810,7 @@ class IPUtil extends IPBase {
 	static isIPv4CIDR(ipStr, mode, options = {}) {
 		const allowCidr = mode === 'strict' ? mode : true;
 		const { format = options.mode, capitalize } = options;
-		return this._validate(ipStr, allowCidr, { format, capitalize,
-			conditionPredicate: (v, isCidr) => v === 4 && isCidr
-		});
+		return this._validate(ipStr, allowCidr, { format, capitalize, conditionPredicate: (v, isCidr) => v === 4 && isCidr });
 	}
 
 	/**
@@ -831,9 +824,7 @@ class IPUtil extends IPBase {
 	static isIPv6CIDR(ipStr, mode, options = {}) {
 		const allowCidr = mode === 'strict' ? mode : true;
 		const { format = options.mode, capitalize } = options;
-		return this._validate(ipStr, allowCidr, { format, capitalize,
-			conditionPredicate: (v, isCidr) => v === 6 && isCidr
-		});
+		return this._validate(ipStr, allowCidr, { format, capitalize, conditionPredicate: (v, isCidr) => v === 6 && isCidr });
 	}
 
 	/**
@@ -1164,6 +1155,7 @@ class IP extends IPBase {
 	 * Alias for {@link IP.stringify} with default options.
 	 *
 	 * @returns {string} A stringified representation of the IP.
+	 * @override
 	 */
 	toString() {
 		return this.stringify();
