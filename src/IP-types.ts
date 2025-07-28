@@ -105,6 +105,26 @@ export interface ParseOptions {
 export interface IPOptions extends StringifyOptions, ParseOptions {}
 
 /**
+ * Options for comparing IP inputs.
+ */
+export interface CompareOptions {
+	/**
+	 * Whether to exclude equivalent IP addresses from being treated as matching in IP comparison methods.
+	 *
+	 * For example, {@link IPUtil.contains} returns `true` by default when two equivalent IP strings
+	 * are compared (i.e., this option defaults to `false`):
+	 *
+	 * ```ts
+	 * IPUtil.contains('fd12:3456:789a:1::/64', 'fd12:3456:789a:1:0:0:0:0/64'); // true
+	 * ```
+	 *
+	 * If this option is set to `true`, the comparison above will return `false` instead, since
+	 * identical CIDRs are not considered to form a containment relationship in that case.
+	 */
+	excludeEquivalent?: boolean;
+}
+
+/**
  * The strict CIDR validation mode ensures that CIDR addresses have a matching prefix
  * for the specified bit length. If a CIDR string is technically valid but the prefix
  * does not align with the given bit length, it will be corrected and returned as a string.

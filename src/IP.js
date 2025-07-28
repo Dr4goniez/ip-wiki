@@ -351,34 +351,50 @@ class IPBase {
 	}
 
 	/**
-	 * Compares two IP address ranges to check for inclusion.
+	 * Compares two IP address ranges to determine whether they are equal or one contains the other.
 	 *
-	 * @param {RangeObject} ip1 Range object of the first IP (typically the "narrower" one).
+	 * @param {RangeObject} ip1 Range object of the first IP.
 	 * @param {string | IP} ip2 IP string or IP instance to compare against.
-	 * @param {"<" | ">"} comparator Use `<` to check if `ip2` contains `ip1`, or `>` if `ip1` contains `ip2`.
-	 * @returns {?boolean} `null` if `ip2` is not a valid IP; `false` if not contained; `true` otherwise.
+	 * @param {'<' | '>' | '='} comparator Use `<` to check if `ip2` contains `ip1`, `>` if `ip1` contains `ip2`,
+	 * or `=` if `ip1` and `ip2` are exactly equal.
+	 * @param {CompareOptions} [options] Options to control comparison behavior.
+	 *
+	 * {@link CompareOptions.excludeEquivalent} has no effect for `comparator === '='`.
+	 * @returns {?boolean} `null` if `ip2` is not a valid IP; `true` if comparison passes; `false` otherwise.
 	 * @protected
 	 */
-	static _compareRanges(ip1, ip2, comparator) {
+	static _compareRanges(ip1, ip2, comparator, options = {}) {
+		if (!['<', '>', '='].includes(comparator)) {
+			throw new Error('Invalid comparator provided.');
+		}
 		const range1 = ip1;
 		const range2 = this._getRangeObject(ip2);
 		if (!range2) {
 			return null;
 		}
 
-		// Defensive: Ensure matching IP version (length check)
+		// Ensure matching IP version
 		const len = range1.first.length;
-		if (![range1.last, range2.first, range2.last].every((arr) => arr.length === len)) {
+		if (len !== range2.first.length) {
+			return false;
+		}
+
+		// Check equality
+		const isEqual =
+			range1.bitLen === range2.bitLen &&
+			range1.first.every((part, i) => part === range2.first[i]) &&
+			range1.last.every((part, i) => part === range2.last[i]);
+		if (comparator === '=') {
+			return isEqual;
+		}
+		if (options.excludeEquivalent && isEqual) {
 			return false;
 		}
 
 		// Determine broader and narrower ranges based on comparator
 		const [broader, narrower] = comparator === '<'
 			? [range2, range1]
-			: comparator === '>'
-			? [range1, range2]
-			: (() => { throw new Error('Invalid comparator provided.'); })();
-
+			: [range1, range2];
 		for (let i = 0; i < len; i++) {
 			if (broader.first[i] > narrower.first[i] || narrower.last[i] > broader.last[i]) {
 				return false;
@@ -414,30 +430,6 @@ class IPBase {
 			}
 		}
 		return this._parseRange(parts, bitLen);
-	}
-
-	/**
-	 * Checks if two IP addresses are equal.
-	 *
-	 * Compares both the IP parts and CIDR bit length.
-	 *
-	 * @param {RangeObject} ipObj Range object of the first IP.
-	 * @param {string | IP} ipStr IP string, CIDR, or IP instance to compare.
-	 * @returns {?boolean} `true` if equal, `false` if not equal, `null` if second input is invalid.
-	 * @protected
-	 */
-	static _checkEquality(ipObj, ipStr) {
-		const ip1 = ipObj;
-		const ip2 = this._getRangeObject(ipStr);
-		if (!ip2) {
-			return null;
-		}
-		// Must match version (part length) and bit length
-		if (ip1.first.length !== ip2.first.length || ip1.bitLen !== ip2.bitLen) {
-			return false;
-		}
-		// Compare each part
-		return ip1.first.every((part, i) => part === ip2.first[i]);
 	}
 
 	/**
@@ -832,15 +824,16 @@ class IPUtil extends IPBase {
 	 *
 	 * @param {string | IP} ipStr The target IP address to evaluate.
 	 * @param {string | IP} cidrStr The CIDR string or IP instance representing the range.
+	 * @param {CompareOptions} [options] Options for comparing the input IPs.
 	 * @returns {?boolean} `true` if `ipStr` is within the range of `cidrStr`, `false` if not, or `null`
 	 * if either input is invalid.
 	 */
-	static isInRange(ipStr, cidrStr) {
+	static isInRange(ipStr, cidrStr, options = {}) {
 		const ip = this._getRangeObject(ipStr);
 		if (ip === null) {
 			return null;
 		}
-		return this._compareRanges(ip, cidrStr, '<');
+		return this._compareRanges(ip, cidrStr, '<', options);
 	}
 
 	/**
@@ -848,15 +841,16 @@ class IPUtil extends IPBase {
 	 *
 	 * @param {string | IP} ipStr The IP address to evaluate.
 	 * @param {(string | IP)[]} cidrArr An array of CIDR strings or IP instances to check against.
+	 * @param {CompareOptions} [options] Options for comparing the input IPs.
 	 * @returns {?number} The index of the first matching CIDR in the array, `-1` if none match, or `null`
 	 * if `ipStr` is invalid.
 	 */
-	static isInAnyRange(ipStr, cidrArr) {
+	static isInAnyRange(ipStr, cidrArr, options = {}) {
 		const ip = this._getRangeObject(ipStr);
 		if (ip === null) {
 			return null;
 		}
-		return cidrArr.findIndex((cidr) => !!this._compareRanges(ip, cidr, '<'));
+		return cidrArr.findIndex((cidr) => !!this._compareRanges(ip, cidr, '<', options));
 	}
 
 	/**
@@ -864,10 +858,11 @@ class IPUtil extends IPBase {
 	 *
 	 * @param {string | IP} ipStr The IP address to evaluate.
 	 * @param {(string | IP)[]} cidrArr An array of CIDR strings or IP instances to check against.
+	 * @param {CompareOptions} [options] Options for comparing the input IPs.
 	 * @returns {?boolean} `true` if the IP is within all CIDRs, `false` if not, or `null` if `ipStr` is invalid
 	 * or `cidrArr` is not an array or an empty array.
 	 */
-	static isInAllRanges(ipStr, cidrArr) {
+	static isInAllRanges(ipStr, cidrArr, options = {}) {
 		if (!Array.isArray(cidrArr) || !cidrArr.length) {
 			return null;
 		}
@@ -875,7 +870,7 @@ class IPUtil extends IPBase {
 		if (ip === null) {
 			return null;
 		}
-		return cidrArr.every((cidr) => !!this._compareRanges(ip, cidr, '<'));
+		return cidrArr.every((cidr) => !!this._compareRanges(ip, cidr, '<', options));
 	}
 
 	/**
@@ -883,14 +878,15 @@ class IPUtil extends IPBase {
 	 *
 	 * @param {string | IP} cidrStr The CIDR string or IP instance representing the containing range.
 	 * @param {string | IP} ipStr The target IP address to check.
+	 * @param {CompareOptions} [options] Options for comparing the input IPs.
 	 * @returns {?boolean} `true` if `cidrStr` contains `ipStr`, `false` if not, or `null` if either input is invalid.
 	 */
-	static contains(cidrStr, ipStr) {
+	static contains(cidrStr, ipStr, options = {}) {
 		const cidr = this._getRangeObject(cidrStr);
 		if (cidr === null) {
 			return null;
 		}
-		return this._compareRanges(cidr, ipStr, '>');
+		return this._compareRanges(cidr, ipStr, '>', options);
 	}
 
 	/**
@@ -898,14 +894,15 @@ class IPUtil extends IPBase {
 	 *
 	 * @param {string | IP} cidrStr The CIDR string or IP instance representing the containing range.
 	 * @param {(string | IP)[]} ipArr An array of IP or CIDR strings or IP instances to test.
+	 * @param {CompareOptions} [options] Options for comparing the input IPs.
 	 * @returns {?number} The index of the first match in `ipArr`, `-1` if none match, or `null` if `cidrStr` is invalid.
 	 */
-	static containsAny(cidrStr, ipArr) {
+	static containsAny(cidrStr, ipArr, options = {}) {
 		const cidr = this._getRangeObject(cidrStr);
 		if (cidr === null) {
 			return null;
 		}
-		return ipArr.findIndex((ip) => !!this._compareRanges(cidr, ip, '>'));
+		return ipArr.findIndex((ip) => !!this._compareRanges(cidr, ip, '>', options));
 	}
 
 	/**
@@ -913,10 +910,11 @@ class IPUtil extends IPBase {
 	 *
 	 * @param {string | IP} cidrStr The CIDR string or IP instance representing the containing range.
 	 * @param {(string | IP)[]} ipArr An array of IP or CIDR strings or IP instances to test.
+	 * @param {CompareOptions} [options] Options for comparing the input IPs.
 	 * @returns {?boolean} `true` if all IPs are contained, `false` if any are not, or `null` if `cidrStr` is invalid or
 	 * `ipArr` is not an array or an empty array.
 	 */
-	static containsAll(cidrStr, ipArr) {
+	static containsAll(cidrStr, ipArr, options = {}) {
 		if (!Array.isArray(ipArr) || !ipArr.length) {
 			return null;
 		}
@@ -924,7 +922,7 @@ class IPUtil extends IPBase {
 		if (cidr === null) {
 			return null;
 		}
-		return ipArr.every((ip) => !!this._compareRanges(cidr, ip, '>'));
+		return ipArr.every((ip) => !!this._compareRanges(cidr, ip, '>', options));
 	}
 
 	/**
@@ -939,7 +937,7 @@ class IPUtil extends IPBase {
 		if (ip1 === null) {
 			return null;
 		}
-		return this._checkEquality(ip1, ipStr2);
+		return this._compareRanges(ip1, ipStr2, '=');
 	}
 
 	/**
@@ -954,7 +952,7 @@ class IPUtil extends IPBase {
 		if (ip1 === null) {
 			return null;
 		}
-		return ipArr.findIndex((ip2) => !!this._checkEquality(ip1, ip2));
+		return ipArr.findIndex((ip2) => !!this._compareRanges(ip1, ip2, '='));
 	}
 
 	/**
@@ -973,7 +971,7 @@ class IPUtil extends IPBase {
 		if (ip1 === null) {
 			return null;
 		}
-		return ipArr.every((ip2) => !!this._checkEquality(ip1, ip2));
+		return ipArr.every((ip2) => !!this._compareRanges(ip1, ip2, '='));
 	}
 
 	/**
@@ -1308,73 +1306,79 @@ class IP extends IPBase {
 	 * Checks whether the IP address associated with this instance is within the CIDR range of another.
 	 *
 	 * @param {string | IP} cidrStr The CIDR string or IP instance representing the range.
+	 * @param {CompareOptions} [options] Options for comparing the input IPs.
 	 * @returns {?boolean} A boolean indicating whether the IP address is within the CIDR range, or
 	 * `null` if `cidrStr` is invalid.
 	 */
-	isInRange(cidrStr) {
-		return IP._compareRanges(this.getProperties(), cidrStr, '<');
+	isInRange(cidrStr, options = {}) {
+		return IP._compareRanges(this.getProperties(), cidrStr, '<', options);
 	}
 
 	/**
 	 * Checks whether the IP address associated with this instance is within any of the CIDR ranges in the array.
 	 *
 	 * @param {(string | IP)[]} cidrArr An array of CIDR strings or IP instances to check against.
+	 * @param {CompareOptions} [options] Options for comparing the input IPs.
 	 * @returns {number} The index of the first matching CIDR in the array, or `-1` if none match.
 	 */
-	isInAnyRange(cidrArr) {
+	isInAnyRange(cidrArr, options = {}) {
 		const props = this.getProperties();
-		return cidrArr.findIndex((cidr) => !!IP._compareRanges(props, cidr, '<'));
+		return cidrArr.findIndex((cidr) => !!IP._compareRanges(props, cidr, '<', options));
 	}
 
 	/**
 	 * Checks whether the IP address associated with this instance is within all CIDR ranges in the array.
 	 *
 	 * @param {(string | IP)[]} cidrArr An array of CIDR strings or IP instances to check against.
+	 * @param {CompareOptions} [options] Options for comparing the input IPs.
 	 * @returns {?boolean} `true` if the IP is within all CIDRs, `false` if not, or `null` if `cidrArr` is
 	 * not an array or an empty array.
 	 */
-	isInAllRanges(cidrArr) {
+	isInAllRanges(cidrArr, options = {}) {
 		if (!Array.isArray(cidrArr) || !cidrArr.length) {
 			return null;
 		}
 		const props = this.getProperties();
-		return cidrArr.every((cidr) => !!IP._compareRanges(props, cidr, '<'));
+		return cidrArr.every((cidr) => !!IP._compareRanges(props, cidr, '<', options));
 	}
 
 	/**
 	 * Checks whether the CIDR range associated with this instance contains the specified IP address.
 	 *
 	 * @param {string | IP} ipStr The target IP address to check.
+	 * @param {CompareOptions} [options] Options for comparing the input IPs.
 	 * @returns {?boolean} `true` if the CIDR range contains `ipStr`, `false` if not, or `null` if `ipStr` is invalid.
 	 */
-	contains(ipStr) {
-		return IP._compareRanges(this.getProperties(), ipStr, '>');
+	contains(ipStr, options = {}) {
+		return IP._compareRanges(this.getProperties(), ipStr, '>', options);
 	}
 
 	/**
 	 * Checks whether the CIDR range associated with this instance contains any of the IP addresses in the array.
 	 *
 	 * @param {(string | IP)[]} ipArr An array of IP or CIDR strings or IP instances to test.
+	 * @param {CompareOptions} [options] Options for comparing the input IPs.
 	 * @returns {number} The index of the first match in `ipArr`, or `-1` if none match.
 	 */
-	containsAny(ipArr) {
+	containsAny(ipArr, options = {}) {
 		const props = this.getProperties();
-		return ipArr.findIndex((ip) => !!IP._compareRanges(props, ip, '>'));
+		return ipArr.findIndex((ip) => !!IP._compareRanges(props, ip, '>', options));
 	}
 
 	/**
 	 * Checks whether the CIDR range associated with this instance contains all of the IP addresses in the array.
 	 *
 	 * @param {(string | IP)[]} ipArr An array of IP or CIDR strings or IP instances to test.
+	 * @param {CompareOptions} [options] Options for comparing the input IPs.
 	 * @returns {?boolean} `true` if all IPs are contained, `false` if any are not, or `null` if
 	 * `ipArr` is not an array or an empty array.
 	 */
-	containsAll(ipArr) {
+	containsAll(ipArr, options = {}) {
 		if (!Array.isArray(ipArr) || !ipArr.length) {
 			return null;
 		}
 		const props = this.getProperties();
-		return ipArr.every((ip) => !!IP._compareRanges(props, ip, '>'));
+		return ipArr.every((ip) => !!IP._compareRanges(props, ip, '>', options));
 	}
 
 	/**
@@ -1385,7 +1389,7 @@ class IP extends IPBase {
 	 */
 	equals(ipStr) {
 		const props = this.getProperties();
-		return IP._checkEquality(props, ipStr);
+		return IP._compareRanges(props, ipStr, '=');
 	}
 
 	/**
@@ -1396,7 +1400,7 @@ class IP extends IPBase {
 	 */
 	equalsAny(ipArr) {
 		const props = this.getProperties();
-		return ipArr.findIndex((ip) => !!IP._checkEquality(props, ip));
+		return ipArr.findIndex((ip) => !!IP._compareRanges(props, ip, '='));
 	}
 
 	/**
@@ -1411,7 +1415,7 @@ class IP extends IPBase {
 			return null;
 		}
 		const props = this.getProperties();
-		return ipArr.every((ip) => !!IP._checkEquality(props, ip));
+		return ipArr.every((ip) => !!IP._compareRanges(props, ip, '='));
 	}
 
 	/**
@@ -1448,6 +1452,7 @@ class IP extends IPBase {
  * @typedef {import('./IP-types.ts').StringifyOptions} StringifyOptions
  * @typedef {import('./IP-types.ts').ParseOptions} ParseOptions
  * @typedef {import('./IP-types.ts').IPOptions} IPOptions
+ * @typedef {import('./IP-types.ts').CompareOptions} CompareOptions
  * @typedef {import('./IP-types.ts').StrictCIDR} StrictCIDR
  * @typedef {import('./IP-types.ts').ConditionPredicate} ConditionPredicate
  * @typedef {import('./IP-types.ts').IntersectOptions} IntersectOptions
