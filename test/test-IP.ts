@@ -529,6 +529,322 @@ const ipUtilMap: TestMap<typeof IPUtil> = new Map([
 			expected: 'fd12:3456:789a:0001:0000:0000:0000:0000/64'
 		},
 	]],
+	['isInRange', [
+		{
+			args: ['192.168.0.100', '192.168.0.0/24'] as const,
+			expected: true
+		},
+		{
+			args: ['fd12:3456:789a:1:dead:beef:0:1234', 'fd12:3456:789a:1:dead:beef:0::/112'] as const,
+			expected: true
+		},
+		{
+			args: ['192.168.0.100', 'fd12:3456:789a:1:dead:beef:0::/112'] as const,
+			expected: false
+		},
+		{
+			args: ['invalid_ip', '192.168.0.0/24'] as const,
+			expected: null
+		},
+		{
+			args: ['192.168.0.0/25', '192.168.0.0/24'] as const,
+			expected: true
+		},
+		{
+			args: ['192.168.0.0/23', '192.168.0.0/24'] as const,
+			expected: false
+		},
+		{
+			args: ['fd12:3456:789a:1:dead::/80', 'fd12:3456:789a:1::/64'] as const,
+			expected: true
+		},
+		{
+			args: ['fd12:3456:789a::/48', 'fd12:3456:789a:1::/64'] as const,
+			expected: false
+		},
+		{
+			args: ['192.168.0.1', '192.168.0.1/32', { excludeEquivalent: true }] as const,
+			expected: false
+		},
+		{
+			args: ['192.168.0.16/30', '192.168.0.0/24', { excludeEquivalent: false }] as const,
+			expected: true
+		},
+		// The first CIDR is inaccurate
+		{
+			args: ['fd12:3456:789a:1::1/64', 'fd12:3456:789a:1:0:0:0:0/64', { excludeEquivalent: true }] as const,
+			expected: false
+		},
+		{
+			args: ['fd12:3456:789a:1::/64', 'fd12:3456:789a:1:0:0:0:0/63', { excludeEquivalent: false }] as const,
+			expected: true
+		},
+	]],
+	['isInAnyRange', [
+		{
+			args: ['192.168.0.100', ['192.168.1.0/24', '192.168.0.0/24']] as const,
+			expected: 1
+		},
+		{
+			args: ['fd12:3456:789a:1:dead:beef:0:1234', ['fd12:3456:789a:2::/64', 'fd12:3456:789a:1::/64']] as const,
+			expected: 1
+		},
+		{
+			args: ['192.168.0.100', ['192.168.1.0/24', '192.168.2.0/24']] as const,
+			expected: -1
+		},
+		{
+			args: ['invalid_ip', ['192.168.0.0/24']] as const,
+			expected: null
+		},
+		{
+			args: ['192.168.0.0/25', ['192.168.0.0/24', '192.168.0.0/23']] as const,
+			expected: 0
+		},
+		{
+			args: ['192.168.0.0/23', ['192.168.0.0/24', '192.168.0.0/25']] as const,
+			expected: -1
+		},
+		{
+			args: ['fd12:3456:789a:1:dead::/80', ['fd12:3456:789a:2::/64', 'fd12:3456:789a:1::/64']] as const,
+			expected: 1
+		},
+		{
+			args: ['fd12:3456:789a::/48', ['fd12:3456:789a::/50', 'fd12:3456:789a:1::/64']] as const,
+			expected: -1
+		},
+		{
+			args: ['192.168.0.1/32', ['192.168.0.1', '192.168.0.0/31'], { excludeEquivalent: true }] as const,
+			expected: 1
+		},
+		{
+			args: ['192.168.0.16/32', ['192.168.0.16', '192.168.0.0/27'], { excludeEquivalent: false }] as const,
+			expected: 0
+		},
+		// The first CIDR is inaccurate
+		{
+			args: ['fd12:3456:789a:1::1/64', ['fd12:3456:789a:1::/64', 'fd12:3456:789a:1::/63'], { excludeEquivalent: true }] as const,
+			expected: 1
+		},
+		{
+			args: ['fd12:3456:789a:1::/64', ['fd12:3456:789a:1::/64', 'fd12:3456:789a:1::/63'], { excludeEquivalent: false }] as const,
+			expected: 0
+		},
+	]],
+	['isInAllRanges', [
+		{
+			args: ['192.168.0.16', ['192.168.0.0/24', '192.168.0.0/27']] as const,
+			expected: true
+		},
+		{
+			args: ['fd12:3456:789a:1:dead:beef:0:1234', ['fd12:3456:789a:1::/64', 'fd12:3456:789a:1:dead:beef:0::/112']] as const,
+			expected: true
+		},
+		{
+			args: ['192.168.0.16', ['192.168.0.0/24', '192.168.1.0/24']] as const,
+			expected: false
+		},
+		{
+			args: ['invalid_ip', ['192.168.0.0/24']] as const,
+			expected: null
+		},
+		{
+			args: ['192.168.0.16', []] as const,
+			expected: null
+		},
+		{
+			args: ['192.168.0.16', {}] as const,
+			expected: null
+		},
+		{
+			args: ['192.168.0.0/25', ['192.168.0.0/24', '192.168.0.0/23']] as const,
+			expected: true
+		},
+		{
+			args: ['192.168.0.0/23', ['192.168.0.0/24', '192.168.0.0/25']] as const,
+			expected: false
+		},
+		{
+			args: ['fd12:3456:789a:1:dead::/80', ['fd12:3456:789a:1:de00::/72', 'fd12:3456:789a:1::/64']] as const,
+			expected: true
+		},
+		{
+			args: ['fd12:3456:789a::/48', ['fd12:3456:789a::/50', 'fd12:3456:789a:1::/64']] as const,
+			expected: false
+		},
+		{
+			args: ['192.168.0.1/32', ['192.168.0.1', '192.168.0.0/31'], { excludeEquivalent: true }] as const,
+			expected: false
+		},
+		{
+			args: ['192.168.0.1/32', ['192.168.0.1', '192.168.0.0/31'], { excludeEquivalent: false }] as const,
+			expected: true
+		},
+		// The first CIDR is inaccurate
+		{
+			args: ['fd12:3456:789a:1::1/64', ['fd12:3456:789a:1::/64', 'fd12:3456:789a:1::/63'], { excludeEquivalent: true }] as const,
+			expected: false
+		},
+		{
+			args: ['fd12:3456:789a:1::/64', ['fd12:3456:789a:1::/64', 'fd12:3456:789a:1::/63'], { excludeEquivalent: false }] as const,
+			expected: true
+		},
+	]],
+	['contains', [
+		{
+			args: ['192.168.0.0/24', '192.168.0.100'] as const,
+			expected: true
+		},
+		{
+			args: ['fd12:3456:789a:1:dead:beef:0::/112', 'fd12:3456:789a:1:dead:beef:0:1234'] as const,
+			expected: true
+		},
+		{
+			args: ['fd12:3456:789a:1:dead:beef:0::/112', '192.168.0.100'] as const,
+			expected: false
+		},
+		{
+			args: ['192.168.0.0/24', 'invalid_ip'] as const,
+			expected: null
+		},
+		{
+			args: ['192.168.0.0/24', '192.168.0.0/25'] as const,
+			expected: true
+		},
+		{
+			args: ['192.168.0.0/24', '192.168.0.0/23'] as const,
+			expected: false
+		},
+		{
+			args: ['fd12:3456:789a:1::/64', 'fd12:3456:789a:1:dead::/80'] as const,
+			expected: true
+		},
+		{
+			args: ['fd12:3456:789a:1::/64', 'fd12:3456:789a::/48'] as const,
+			expected: false
+		},
+		{
+			args: ['192.168.0.1/32', '192.168.0.1', { excludeEquivalent: true }] as const,
+			expected: false
+		},
+		{
+			args: ['192.168.0.0/24', '192.168.0.16/30', { excludeEquivalent: false }] as const,
+			expected: true
+		},
+		// The first CIDR is inaccurate
+		{
+			args: ['fd12:3456:789a:1::1/64', 'fd12:3456:789a:1:0:0:0:1/64', { excludeEquivalent: true }] as const,
+			expected: false
+		},
+		{
+			args: ['fd12:3456:789a:1::1/64', 'fd12:3456:789a:1:0:0:0:1/64', { excludeEquivalent: false }] as const,
+			expected: true
+		},
+	]],
+	['containsAny', [
+		{
+			args: ['192.168.0.0/24', ['192.168.1.0/24', '192.168.0.100']] as const,
+			expected: 1
+		},
+		{
+			args: ['fd12:3456:789a:1::/64', ['fd12:3456:789a:2::/64', 'fd12:3456:789a:1:dead:beef:0:1234']] as const,
+			expected: 1
+		},
+		{
+			args: ['192.168.1.0/24', ['192.168.0.100', '192.168.2.0/24']] as const,
+			expected: -1
+		},
+		{
+			args: ['invalid_ip', ['192.168.0.0/24']] as const,
+			expected: null
+		},
+		{
+			args: ['192.168.0.0/31', ['192.168.0.0/31', '192.168.0.1/32'], { excludeEquivalent: true }] as const,
+			expected: 1
+		},
+		{
+			args: ['192.168.0.0/31', ['192.168.0.0/31', '192.168.0.1/32'], { excludeEquivalent: false }] as const,
+			expected: 0
+		},
+		// The first CIDR is inaccurate
+		{
+			args: ['fd12:3456:789a:1::1/63', ['fd12:3456:789a:1::/63', 'fd12:3456:789a:1::/64'], { excludeEquivalent: true }] as const,
+			expected: 1
+		},
+		{
+			args: ['fd12:3456:789a:1::/63', ['fd12:3456:789a:1::/63', 'fd12:3456:789a:1::/64'], { excludeEquivalent: false }] as const,
+			expected: 0
+		},
+	]],
+	['containsAll', [
+		{
+			args: ['192.168.0.0/24', ['192.168.0.16', '192.168.0.0/27']] as const,
+			expected: true
+		},
+		{
+			args: ['fd12:3456:789a:1::/64', ['fd12:3456:789a:1:dead:beef:0:1234', 'fd12:3456:789a:1:dead:beef:0::/112']] as const,
+			expected: true
+		},
+		{
+			args: ['192.168.0.0/24', ['192.168.0.16', '192.168.1.0/24']] as const,
+			expected: false
+		},
+		{
+			args: ['invalid_ip', ['192.168.0.0/24']] as const,
+			expected: null
+		},
+		{
+			args: ['192.168.0.16', []] as const,
+			expected: null
+		},
+		{
+			args: ['192.168.0.16', {}] as const,
+			expected: null
+		},
+		{
+			args: ['192.168.0.0/31', ['192.168.0.1', '192.168.0.0/31'], { excludeEquivalent: true }] as const,
+			expected: false
+		},
+		{
+			args: ['192.168.0.0/31', ['192.168.0.1', '192.168.0.0/31'], { excludeEquivalent: false }] as const,
+			expected: true
+		},
+		// The first CIDR is inaccurate
+		{
+			args: ['fd12:3456:789a:1::1/63', ['fd12:3456:789a:1::/63', 'fd12:3456:789a:1::/64'], { excludeEquivalent: true }] as const,
+			expected: false
+		},
+		{
+			args: ['fd12:3456:789a:1::/63', ['fd12:3456:789a:1::/63', 'fd12:3456:789a:1::/64'], { excludeEquivalent: false }] as const,
+			expected: true
+		},
+	]],
+	['equals', [
+		{
+			args: ['192.168.0.1/32', '192.168.0.1'] as const,
+			expected: true
+		},
+		{
+			args: ['192.168.0.0/30', '192.168.0.0/31'] as const,
+			expected: false
+		},
+		{
+			args: ['fd12:3456:789a:1:dead:beef:0:1234/128', 'fd12:3456:789a:1:dead:beef:0:1234'] as const,
+			expected: true
+		},
+		{
+			args: ['fd12:3456:789a:1::/64', 'fd12:3456:789a:1::/65'] as const,
+			expected: false
+		},
+		{
+			args: ['invalid_ip', '192.168.0.1'] as const,
+			expected: null
+		},
+		{
+			args: ['192.168.0.1', 'invalid_ip'] as const,
+			expected: null
+		},
+	]]
 ]);
 
 describe('IPUtil', () => {
