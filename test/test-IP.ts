@@ -1,6 +1,6 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { describe } from 'mocha';
-import { strictEqual } from 'node:assert';
+import { assert } from 'chai';
 import { IPUtil } from '../src/IP';
 
 /**
@@ -35,6 +35,7 @@ type IPUtilParamsMap = MethodParamsMap<typeof IPUtil>;
 interface TestCase<T, K extends StaticMethodKeys<T>> {
 	args: MethodParamsMap<T>[K];
 	expected: unknown;
+	validate?: (...args: any[]) => any;
 }
 
 /**
@@ -849,10 +850,10 @@ const ipUtilMap: TestMap<typeof IPUtil> = new Map([
 
 describe('IPUtil', () => {
 	ipUtilMap.forEach((arr, method) => {
-		arr.forEach(({ args, expected }) => {
+		arr.forEach(({ args, expected, validate = assert.strictEqual }) => {
 			describe(String(method) + joinArgs(...args), () => {
 				it(`should return ${expected}`, () => {
-					strictEqual(callIpUtilMethod(method, args), expected);
+					validate(callIpUtilMethod(method, args), expected);
 				});
 			});
 		});
