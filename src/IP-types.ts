@@ -1,5 +1,7 @@
 /**
  * The result type of `IPBase.parse`.
+ *
+ * @private
  */
 export interface Parsed {
     /**
