@@ -1,7 +1,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { describe } from 'mocha';
 import { assert } from 'chai';
-import { IPUtil } from '../src/IP';
+import { IP, IPUtil } from '../src/IP';
 
 /**
  * Extracts the keys of all static methods from a given class or object type.
@@ -35,7 +35,7 @@ type IPUtilParamsMap = MethodParamsMap<typeof IPUtil>;
 interface TestCase<T, K extends StaticMethodKeys<T>> {
 	args: MethodParamsMap<T>[K];
 	expected: unknown;
-	validate?: (...args: any[]) => any;
+	stringify?: true;
 }
 
 /**
@@ -845,15 +845,61 @@ const ipUtilMap: TestMap<typeof IPUtil> = new Map([
 			args: ['192.168.0.1', 'invalid_ip'] as const,
 			expected: null
 		},
+	]],
+	['intersect', [
+		{
+			args: ['192.168.0.1', '192.168.0.60'] as const,
+			expected: '192.168.0.0/26',
+			stringify: true
+		},
+		{
+			args: ['192.168.0.1', '192.168.0.60', { minV4: 27 }] as const,
+			expected: null
+		},
+		{
+			args: ['192.168.0.1', '192.168.0.60', { maxV4: 25 }] as const,
+			expected: null
+		},
+		{
+			args: ['fd12:3456:789a:1:dead:beef:0:1234', 'fd12:3456:789a:2:cef7:1:50ef:1234'] as const,
+			expected: 'fd12:3456:789a:0:0:0:0:0/62',
+			stringify: true
+		},
+		{
+			args: ['fd12:3456:789a:1:dead:beef:0:1234', 'fd12:3456:789a:2:cef7:1:50ef:1234', { minV6: 63 }] as const,
+			expected: null
+		},
+		{
+			args: ['fd12:3456:789a:1:dead:beef:0:1234', 'fd12:3456:789a:2:cef7:1:50ef:1234', { maxV6: 61 }] as const,
+			expected: null
+		},
+		{
+			args: ['192.168.0.1', 'invalid_ip'] as const,
+			expected: null
+		},
+		{
+			args: ['192.168.0.1', 'fd12:3456:789a:1:dead:beef:0:1234'] as const,
+			expected: null
+		}
 	]]
 ]);
 
 describe('IPUtil', () => {
 	ipUtilMap.forEach((arr, method) => {
-		arr.forEach(({ args, expected, validate = assert.strictEqual }) => {
+		arr.forEach(({ args, expected, stringify }) => {
 			describe(String(method) + joinArgs(...args), () => {
-				it(`should return ${expected}`, () => {
-					validate(callIpUtilMethod(method, args), expected);
+				const inst = stringify ? 'an IP instance representing ' : '';
+				it(`should return ${inst}${expected}`, () => {
+					const result = callIpUtilMethod(method, args);
+					if (stringify) {
+						if (result instanceof IP) {
+							assert.strictEqual(result.toString(), expected);
+						} else {
+							assert.fail();
+						}
+					} else {
+						assert.strictEqual(result, expected);
+					}
 				});
 			});
 		});
