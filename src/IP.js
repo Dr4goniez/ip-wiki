@@ -1048,7 +1048,7 @@ class IP extends IPBase {
 	 *
 	 * @param {string | IP} ipStr An IP- or CIDR-representing string.
 	 *
-	 * If an `IP` instance is passed, it will be cloned (unless prevented by `options`).
+	 * If an `IP` instance is passed, it will be cloned, unless prevented by `options`.
 	 * @param {ParseOptions} [options] Optional parsing options for the input string.
 	 * @returns {?IP} A new `IP` instance if parsing succeeds, or `null` if the input is invalid.
 	 */
@@ -1058,17 +1058,35 @@ class IP extends IPBase {
 	}
 
 	/**
-	 * Initializes an IP instance from a string and a range (*aka.* a bit length).
+	 * Initializes an IP instance from a string and a range (i.e., a prefix length).
 	 *
-	 * @param {string | IP} ipStr An IP- or CIDR-representing string. If a CIDR string is passed, the `/XX`
-	 * part will be overridden by `range`.
+	 * @param {string | IP} ipStr An IP address or CIDR-formatted string. If a CIDR string is passed,
+	 * the prefix length (e.g., `/24`) is overridden by the `range` parameter.
 	 *
-	 * If an `IP` instance is passed, the method attemps to convert it to a new instance with the given `range`
-	 * (unless prevented by `options`).
-	 * @param {number} range The desired CIDR bit length (0–32 for IPv4, 0–128 for IPv6).
-	 * @param {ParseOptions} [options] Optional parsing options for the input string.
-	 * @returns {?IP} A new `IP` instance if parsing succeeds, or `null` if the input or range is invalid.
-	 * @throws {TypeError} If `range` is not a number.
+	 * If an `IP` instance is passed, the method attempts to create a new instance with the specified `range`,
+	 * unless prevented by `options`.
+	 *
+	 * @param {number} range The desired CIDR prefix length (`0–32` for IPv4, `0–128` for IPv6).
+	 *
+	 * If `ipStr` contains a CIDR prefix length smaller than `range` (e.g., `ipStr = "x.x.x.x/24"`, `range = 25`),
+	 * the result may be non-obvious:
+	 *
+	 * - If `ipStr` is a string:
+	 * ```ts
+	 * const ip = IP.newFromRange('192.168.0.128/24', 25); // The /24 prefix length is ignored
+	 * console.log(ip?.toString()); // 192.168.0.128/25 — recalculated from the address and new prefix
+	 * ```
+	 *
+	 * - If `ipStr` is an IP instance:
+	 * ```ts
+	 * const ip = IP.newFromRange('192.168.0.128/24'); // IP instance with base address 192.168.0.0/24
+	 * const ip2 = IP.newFromRange(ip, 25);
+	 * console.log(ip2?.toString()); // 192.168.0.0/25 — based on the instance's base address and new prefix
+	 * ```
+	 *
+	 * @param {ParseOptions} [options] Optional parsing options for the input.
+	 * @returns {?IP} A new `IP` instance if parsing succeeds; otherwise, `null` if the input or range is invalid.
+	 * @throws {TypeError} If `range` is not an integer.
 	 */
 	static newFromRange(ipStr, range, options = {}) {
 		if (!Number.isInteger(range)) {
