@@ -22,11 +22,6 @@ type MethodParamsMap<T> = {
 };
 
 /**
- * Parameter map for all static methods in the IPUtil class.
- */
-type IPUtilParamsMap = MethodParamsMap<typeof IPUtil>;
-
-/**
  * Represents a single test case for a given method.
  *
  * @template T An object or class with static methods.
@@ -36,6 +31,7 @@ interface TestCase<T, K extends StaticMethodKeys<T>> {
 	args: MethodParamsMap<T>[K];
 	expected: unknown;
 	stringify?: true;
+	error?: true;
 }
 
 /**
@@ -51,18 +47,24 @@ type TestMap<T> = Map<
 >;
 
 /**
- * Calls a static method on the IPUtil class with typed arguments.
+ * Calls a static method on a class-like object with typed arguments.
  *
- * @template K A key from the IPUtilParamsMap.
- * @param method The static method name of IPUtil to call.
- * @param args The argument tuple to pass to the method.
- * @returns The return value from the called method.
+ * @template T The class or object containing static methods.
+ * @template K The method name, limited to callable static keys.
  */
-const callIpUtilMethod = <K extends keyof IPUtilParamsMap>(
+const callStaticMethod = <
+	T,
+	K extends StaticMethodKeys<T>
+>(
+	cls: T,
 	method: K,
-	args: IPUtilParamsMap[K]
-): ReturnType<(typeof IPUtil)[K]> => {
-	return (IPUtil[method] as (...args: IPUtilParamsMap[K]) => ReturnType<(typeof IPUtil)[K]>)(...args);
+	args: MethodParamsMap<T>[K]
+): T[K] extends (...args: any[]) => infer R ? R : never => {
+	const fn = cls[method];
+	if (typeof fn !== 'function') {
+		throw new TypeError(`Property ${String(method)} is not callable`);
+	}
+	return fn.bind(cls)(...args) as any;
 };
 
 /**
@@ -886,16 +888,242 @@ const ipUtilMap: TestMap<typeof IPUtil> = new Map([
 
 describe('IPUtil', () => {
 	ipUtilMap.forEach((arr, method) => {
-		arr.forEach(({ args, expected, stringify }) => {
+		arr.forEach(({ args, expected, stringify, error }) => {
 			describe(String(method) + joinArgs(...args), () => {
 				const inst = stringify ? 'an IP instance representing ' : '';
-				it(`should return ${inst}${expected}`, () => {
-					const result = callIpUtilMethod(method, args);
+				const msg = error
+					? 'should throw an error'
+					: `should return ${inst}${expected}`;
+				it(msg, () => {
+					if (error) {
+						assert.throw(() => callStaticMethod(IPUtil, method, args));
+						return;
+					}
+					const result = callStaticMethod(IPUtil, method, args);
 					if (stringify) {
 						if (result instanceof IP) {
 							assert.strictEqual(result.toString(), expected);
 						} else {
-							assert.fail();
+							assert.fail(`Expected an IP instance for method ${String(method)}`);
+						}
+					} else {
+						assert.strictEqual(result, expected);
+					}
+				});
+			});
+		});
+	});
+});
+
+const ips = {
+	/** `192.168.0.1/32` */
+	0: IP.newFromText('192.168.0.1/32', { suppressFullLengthCidr: false })!,
+	/** `fd12:3456:789a:2:cef7:1:50ef:1234/128` */
+	1: IP.newFromText('fd12:3456:789a:2:cef7:1:50ef:1234/128', { suppressFullLengthCidr: false })!,
+	/** 192.168.0.128/24, base address: 192.168.0.0/24 */
+	2: IP.newFromText('192.168.0.128/24')!,
+	/** fd12:3456:789a:2:8000::/64, base address: fd12:3456:789a:2::/64 */
+	3: IP.newFromText('fd12:3456:789a:2:8000::/64')!,
+};
+Object.entries(ips).forEach(([key, instance]) => {
+	if (!(instance instanceof IP)) {
+		throw new TypeError(`ips[${key}] is not an IP instance.`);
+	}
+});
+
+/**
+ * A mapping of IP static method names to their test cases.
+ */
+const ipStaticMap: TestMap<typeof IP> = new Map([
+	['newFromText', [
+		{
+			args: ['192.168.0.1/32'] as const,
+			expected: '192.168.0.1',
+			stringify: true
+		},
+		{
+			args: ['192.168.0.1/32', { suppressFullLengthCidr: false }] as const,
+			expected: '192.168.0.1/32',
+			stringify: true
+		},
+		{
+			args: ['192.168.0.1/32', {
+				suppressFullLengthCidr: false,
+				conditionPredicate: (v, isCidr) => v === 4 && !isCidr
+			}] as const,
+			expected: null
+		},
+		{
+			args: ['fd12:3456:789a:2:cef7:1:50ef:1234/128'] as const,
+			expected: 'fd12:3456:789a:2:cef7:1:50ef:1234',
+			stringify: true
+		},
+		{
+			args: ['fd12:3456:789a:2:cef7:1:50ef:1234/128', { suppressFullLengthCidr: false }] as const,
+			expected: 'fd12:3456:789a:2:cef7:1:50ef:1234/128',
+			stringify: true
+		},
+		{
+			args: ['fd12:3456:789a:2:cef7:1:50ef:1234/128', {
+				suppressFullLengthCidr: false,
+				conditionPredicate: (v, isCidr) => v === 6 && !isCidr
+			}] as const,
+			expected: null
+		},
+		{
+			args: [ips[0]] as const,
+			expected: '192.168.0.1',
+			stringify: true
+		},
+		{
+			args: [ips[0], { suppressFullLengthCidr: false }] as const,
+			expected: '192.168.0.1/32',
+			stringify: true
+		},
+		{
+			args: [ips[0], {
+				suppressFullLengthCidr: false,
+				conditionPredicate: (v, isCidr) => v === 4 && !isCidr
+			}] as const,
+			expected: null
+		},
+		{
+			args: [ips[1]] as const,
+			expected: 'fd12:3456:789a:2:cef7:1:50ef:1234',
+			stringify: true
+		},
+		{
+			args: [ips[1], { suppressFullLengthCidr: false }] as const,
+			expected: 'fd12:3456:789a:2:cef7:1:50ef:1234/128',
+			stringify: true
+		},
+		{
+			args: [ips[1], {
+				suppressFullLengthCidr: false,
+				conditionPredicate: (v, isCidr) => v === 4 && !isCidr
+			}] as const,
+			expected: null
+		},
+	]],
+	['newFromRange', [
+		// IPv4 /32 -> /30
+		{
+			args: ['192.168.0.1', 30] as const,
+			expected: '192.168.0.0/30',
+			stringify: true
+		},
+		// IPv4 /32, the full-length prefix should be preserved
+		{
+			args: ['192.168.0.1/32', 32, { suppressFullLengthCidr: false }] as const,
+			expected: '192.168.0.1/32',
+			stringify: true
+		},
+		// IPv4 /32, CIDR input disallowed
+		{
+			args: ['192.168.0.1/32', 32, {
+				suppressFullLengthCidr: false,
+				conditionPredicate: (v, isCidr) => v === 4 && !isCidr
+			}] as const,
+			expected: null
+		},
+		// IPv4 /24 (string) -> /25, the network address should be calculated based on the input string
+		{
+			args: ['192.168.0.128/24', 25] as const,
+			expected: '192.168.0.128/25',
+			stringify: true
+		},
+		// IPv6 /128 -> /112
+		{
+			args: ['fd12:3456:789a:2:cef7:1:50ef:1234', 112] as const,
+			expected: 'fd12:3456:789a:2:cef7:1:50ef:0/112',
+			stringify: true
+		},
+		// IPv6 /128, the full-length prefix should be preserved
+		{
+			args: ['fd12:3456:789a:2:cef7:1:50ef:1234/128', 128, { suppressFullLengthCidr: false }] as const,
+			expected: 'fd12:3456:789a:2:cef7:1:50ef:1234/128',
+			stringify: true
+		},
+		// IPv6 /128, CIDR input disallowed
+		{
+			args: ['fd12:3456:789a:2:cef7:1:50ef:1234/128', 128, {
+				suppressFullLengthCidr: false,
+				conditionPredicate: (v, isCidr) => v === 6 && !isCidr
+			}] as const,
+			expected: null
+		},
+		// IPv4 /64 (string) -> /65, the network address should be calculated based on the input string
+		{
+			args: ['fd12:3456:789a:2:8000::/64', 65] as const,
+			expected: 'fd12:3456:789a:2:8000:0:0:0/65',
+			stringify: true
+		},
+		{
+			args: [ips[0], 30] as const,
+			expected: '192.168.0.0/30',
+			stringify: true
+		},
+		{
+			args: [ips[0], 32, { suppressFullLengthCidr: false }] as const,
+			expected: '192.168.0.1/32',
+			stringify: true
+		},
+		{
+			args: [ips[0], 32, {
+				suppressFullLengthCidr: false,
+				conditionPredicate: (v, isCidr) => v === 4 && !isCidr
+			}] as const,
+			expected: null
+		},
+		{
+			args: [ips[2], 25] as const,
+			expected: '192.168.0.0/25',
+			stringify: true
+		},
+		{
+			args: [ips[1], 112] as const,
+			expected: 'fd12:3456:789a:2:cef7:1:50ef:0/112',
+			stringify: true
+		},
+		{
+			args: [ips[1], 128, { suppressFullLengthCidr: false }] as const,
+			expected: 'fd12:3456:789a:2:cef7:1:50ef:1234/128',
+			stringify: true
+		},
+		{
+			args: [ips[1], 128, {
+				suppressFullLengthCidr: false,
+				conditionPredicate: (v, isCidr) => v === 4 && !isCidr
+			}] as const,
+			expected: null
+		},
+		{
+			args: [ips[3], 65] as const,
+			expected: 'fd12:3456:789a:2:0:0:0:0/65',
+			stringify: true
+		},
+	]]
+]);
+
+describe('IP', () => {
+	ipStaticMap.forEach((arr, method) => {
+		arr.forEach(({ args, expected, stringify, error }) => {
+			describe(String(method) + joinArgs(...args), () => {
+				const inst = stringify ? 'an IP instance representing ' : '';
+				const msg = error
+					? 'should throw an error'
+					: `should return ${inst}${expected}`;
+				it(msg, () => {
+					if (error) {
+						assert.throw(() => callStaticMethod(IP, method, args));
+						return;
+					}
+					const result = callStaticMethod(IP, method, args);
+					if (stringify) {
+						if (result instanceof IP) {
+							assert.strictEqual(result.toString(), expected);
+						} else {
+							assert.fail(`Expected an IP instance for method ${String(method)}`);
 						}
 					} else {
 						assert.strictEqual(result, expected);
