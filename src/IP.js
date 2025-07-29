@@ -407,22 +407,42 @@ class IPBase {
 	 * Converts an IP string or IP instance into a range object.
 	 *
 	 * @param {string | IP} ip IP/CIDR string or IP instance.
-	 * @param {ParseOptions & { bitLen?: number; }} [options] Optional parsing options used
-	 * when the input is a string. `bitLen` is an additional option for {@link _parse}.
+	 * @param {ParseOptions & { bitLen?: number; }} [options] Optional parsing options for `ip`.
 	 * @returns {?RangeObject} Range object for the given IP, or `null` if invalid.
 	 * @protected
 	 */
 	static _getRangeObject(ip, options = {}) {
+		const { conditionPredicate, suppressFullLengthCidr = true, bitLen: subnet } = options;
+
 		if (ip instanceof IP) {
-			return ip.getProperties();
+			// Should bahave the same as when the input is a string
+			let props = ip.getProperties();
+			const isV4 = props.first.length === 4;
+			if (subnet !== void 0) {
+				const isValidSubnet = Number.isInteger(subnet) && (
+					(isV4 && 0 <= subnet && subnet <= 32) ||
+					(!isV4 && 0 <= subnet && subnet <= 128)
+				);
+				if (!isValidSubnet) {
+					return null;
+				}
+				props = this._parseRange(props.first, subnet);
+			}
+			if (suppressFullLengthCidr && ((isV4 && props.bitLen === 32) || (!isV4 && props.bitLen === 128))) {
+				props.isCidr = false;
+			}
+			if (conditionPredicate && !conditionPredicate(isV4 ? 4 : 6, props.isCidr)) {
+				return null;
+			}
+			return props;
 		}
-		const { conditionPredicate, suppressFullLengthCidr = true } = options;
+
 		const parsed = this._parse(ip, { suppressFullLengthCidr, bitLen: options.bitLen });
 		if (!parsed) {
 			return null;
 		}
 		const { parts, bitLen } = parsed;
-		if (typeof conditionPredicate === 'function') {
+		if (conditionPredicate) {
 			const isV4 = parts.length === 4;
 			const isCidr = bitLen !== null;
 			if (!conditionPredicate(isV4 ? 4 : 6, isCidr)) {
