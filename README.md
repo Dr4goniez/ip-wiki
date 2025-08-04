@@ -122,7 +122,10 @@ const ipArr = [
 	'fd12:3456:789a:1::/64'
 ];
 const ipv6Cidrs = ipArr.reduce(/** @param {string[]} acc */ (acc, ipStr) => {
-	const sanitized = IPUtil.sanitize(ipStr, false, (version, isCidr) => version === 6 && isCidr);
+	const sanitized = IPUtil.sanitize(ipStr, {
+		capitalize: false,
+		conditionPredicate: (version, isCidr) => version === 6 && isCidr
+	});
 	if (sanitized) {
 		acc.push(sanitized);
 	}
