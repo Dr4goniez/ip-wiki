@@ -929,19 +929,20 @@ describe('IPUtil', () => {
 
 const ips = {
 	/** `192.168.0.1/32` */
-	0: IP.newFromText('192.168.0.1/32', { suppressFullLengthCidr: false })!,
+	'0': IP.newFromText('192.168.0.1/32', { suppressFullLengthCidr: false })!,
 	/** `fd12:3456:789a:2:0:0:50ef:1234/128` */
-	1: IP.newFromText('fd12:3456:789a:2:0:0:50ef:1234/128', { suppressFullLengthCidr: false })!,
+	'1': IP.newFromText('fd12:3456:789a:2:0:0:50ef:1234/128', { suppressFullLengthCidr: false })!,
 	/** 192.168.0.128/24, base address: 192.168.0.0/24 */
-	2: IP.newFromText('192.168.0.128/24')!,
+	'2': IP.newFromText('192.168.0.128/24')!,
 	/** fd12:3456:789a:2:8000::/64, base address: fd12:3456:789a:2::/64 */
-	3: IP.newFromText('fd12:3456:789a:2:8000::/64')!,
+	'3': IP.newFromText('fd12:3456:789a:2:8000::/64')!,
 };
-Object.entries(ips).forEach(([key, instance]) => {
+for (const key in ips) {
+	const instance = ips[key as keyof typeof ips];
 	if (!(instance instanceof IP)) {
 		throw new TypeError(`ips[${key}] is not an IP instance.`);
 	}
-});
+}
 
 /**
  * A mapping of IP static method names to their test cases.

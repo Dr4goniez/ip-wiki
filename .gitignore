@@ -3,3 +3,5 @@ src/test.js
 src/build.ts
 types
 ips.txt
+.nyc_output
+coverage
