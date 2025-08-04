@@ -1109,13 +1109,13 @@ class IP extends IPBase {
 		 * @readonly
 		 * @protected
 		 */
-		this.first = range.first;
+		this.first = range.first.slice();
 		/**
 		 * @type {number[]}
 		 * @readonly
 		 * @protected
 		 */
-		this.last = range.last;
+		this.last = range.last.slice();
 		/**
 		 * @type {number}
 		 * @readonly
@@ -1184,6 +1184,7 @@ class IP extends IPBase {
 	 */
 	stringify(options = {}) {
 		const suffix = this.isCidr ? '/' + this.bitLen : '';
+		options.format = options.format || options.mode;
 		return IP._stringify(this.first, suffix, options);
 	}
 
@@ -1317,7 +1318,8 @@ class IP extends IPBase {
 	 * @returns {{ bitLen: number; cidr: string; first: string | IP; last: string | IP; }}
 	 */
 	getRange(getInstance, options = {}) {
-		let { first, last, bitLen, isCidr } = this.getProperties();
+		const { first, last, bitLen } = this.getProperties();
+		options.format = options.format || options.mode;
 		if (!getInstance) {
 			const firstStr = IP._stringify(first, '', options);
 			return {
@@ -1327,15 +1329,12 @@ class IP extends IPBase {
 				last: IP._stringify(last, '', options)
 			};
 		} else {
-			first = first.slice();
-			last = last.slice();
-			const bl = first.length === 4 ? 32 : 128;
-			isCidr = false;
+			const subnet = first.length === 4 ? 32 : 128;
 			return {
 				bitLen,
 				cidr: IP._stringify(first, '/' + bitLen, options),
-				first: new IP({ first, last: first, bitLen: bl, isCidr }),
-				last: new IP({ first: last, last, bitLen: bl, isCidr })
+				first: new IP({ first, last: first, bitLen: subnet, isCidr: false }),
+				last: new IP({ first: last, last, bitLen: subnet, isCidr: false })
 			};
 		}
 	}
