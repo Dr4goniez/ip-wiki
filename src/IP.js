@@ -1079,7 +1079,7 @@ class IP extends IPBase {
 	 *
 	 * - If `ipStr` is an IP instance:
 	 * ```ts
-	 * const ip = IP.newFromRange('192.168.0.128/24'); // IP instance with base address 192.168.0.0/24
+	 * const ip = IP.newFromText('192.168.0.128/24'); // IP instance with base address 192.168.0.0/24
 	 * const ip2 = IP.newFromRange(ip, 25);
 	 * console.log(ip2?.toString()); // 192.168.0.0/25 — based on the instance's base address and new prefix
 	 * ```
