@@ -12,7 +12,7 @@
     "testjs": "node src/test.js",
     "test": "npx ts-mocha -p tsconfig.json test/test-IP.ts",
     "coverage": "nyc npm run test",
-    "report-coverage": "nyc report --reporter=lcov && npx coveralls-next",
+    "report-coverage": "nyc report --reporter=text-lcov | npx coveralls-next",
     "build": "tsc -p .",
     "docs": "npx typedoc --options typedoc.json"
   },
