@@ -3,6 +3,7 @@
 [![Node.js CI](https://github.com/Dr4goniez/ip-wiki/actions/workflows/ci.yml/badge.svg)](https://github.com/Dr4goniez/ip-wiki/actions/workflows/ci.yml)
 [![npm version](https://img.shields.io/npm/v/ip-wiki.svg)](https://www.npmjs.com/package/ip-wiki)
 [![GitHub License](https://img.shields.io/github/license/Dr4goniez/ip-wiki)](https://github.com/Dr4goniez/ip-wiki)
+![Coveralls](https://img.shields.io/coverallsCoverage/github/Dr4goniez/ip-wiki?branch=main)
 ![node-current](https://img.shields.io/node/v/ip-wiki)
 [![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)](https://github.com/Dr4goniez/ip-wiki/pulls)
 
